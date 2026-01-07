@@ -40,7 +40,7 @@ const Index = () => {
         {/* Header */}
         <div className="space-y-2">
           <h1 className="text-3xl font-display font-bold">
-            Welcome back, <span className="gradient-text">Alex</span>
+            Welcome back, <span className="gradient-text">Anupam</span>
           </h1>
           <p className="text-muted-foreground">
             Here's an overview of your academic progress and assignments.

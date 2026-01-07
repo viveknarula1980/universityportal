@@ -30,11 +30,11 @@ export default function Settings() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" defaultValue="Alex Johnson" />
+              <Input id="name" defaultValue="Anupam " />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" defaultValue="alex.johnson@university.edu" />
+              <Input id="email" defaultValue="Anupam.@university.edu" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="student-id">Student ID</Label>

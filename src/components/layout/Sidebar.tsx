@@ -81,7 +81,7 @@ export function Sidebar() {
           </div>
           {!collapsed && (
             <div className="flex-1">
-              <p className="font-medium text-sm">Alex Johnson</p>
+              <p className="font-medium text-sm">Anupam </p>
               <p className="text-xs text-sidebar-foreground/60">Computer Science</p>
             </div>
           )}
