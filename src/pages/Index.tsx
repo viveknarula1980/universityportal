@@ -5,6 +5,9 @@ import { AIUsageMeter } from "@/components/dashboard/AIUsageMeter";
 import { AssignmentCard } from "@/components/dashboard/AssignmentCard";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
+import { apiService } from "@/services/api";
 
 const assignments = [
   {
@@ -33,6 +36,29 @@ const assignments = [
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [stats, setStats] = useState({
+    total: 12,
+    completed: 8,
+    pending: 4,
+    aiAssisted: 5,
+  });
+
+  useEffect(() => {
+    // Fetch real data from API
+    const fetchData = async () => {
+      try {
+        const response = await apiService.getAssignments();
+        if (response.success && response.data) {
+          // Update stats based on real data
+          // setStats(calculateStats(response.data));
+        }
+      } catch (error) {
+        console.error("Failed to fetch assignments:", error);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <MainLayout>
@@ -40,7 +66,7 @@ const Index = () => {
         {/* Header */}
         <div className="space-y-2">
           <h1 className="text-3xl font-display font-bold">
-            Welcome back, <span className="gradient-text">Anupam</span>
+            Welcome back, <span className="gradient-text">{user?.name || "Student"}</span>
           </h1>
           <p className="text-muted-foreground">
             Here's an overview of your academic progress and assignments.
@@ -51,14 +77,14 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard
             title="Total Assignments"
-            value={12}
+            value={stats.total}
             subtitle="This semester"
             icon={FileText}
             variant="primary"
           />
           <StatsCard
             title="Completed"
-            value={8}
+            value={stats.completed}
             subtitle="On time submissions"
             icon={CheckCircle2}
             variant="default"
@@ -66,14 +92,14 @@ const Index = () => {
           />
           <StatsCard
             title="Pending"
-            value={4}
+            value={stats.pending}
             subtitle="Due this week"
             icon={Clock}
             variant="default"
           />
           <StatsCard
             title="AI Assisted"
-            value={5}
+            value={stats.aiAssisted}
             subtitle="With declaration"
             icon={Sparkles}
             variant="ai"

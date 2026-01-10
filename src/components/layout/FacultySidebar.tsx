@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
-  LayoutDashboard, 
+  Users, 
   FileText, 
-  Sparkles, 
   Link2, 
   Settings,
   User,
@@ -14,16 +14,17 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: FileText, label: "Assignments", path: "/assignments" },
-  { icon: Sparkles, label: "AI Generator", path: "/ai-generator" },
+  { icon: Users, label: "Faculty Dashboard", path: "/faculty" },
+  { icon: FileText, label: "Submissions", path: "/faculty/submissions" },
   { icon: Link2, label: "Blockchain", path: "/blockchain" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
-export function Sidebar() {
+export function FacultySidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <aside 
@@ -35,13 +36,13 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 flex items-center justify-between border-b border-sidebar-border">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-primary-foreground" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+            <Users className="w-5 h-5 text-white" />
           </div>
           {!collapsed && (
             <div>
               <h1 className="font-display font-bold text-lg">EduChain</h1>
-              <p className="text-xs text-sidebar-foreground/60">AI + Blockchain</p>
+              <p className="text-xs text-sidebar-foreground/60">Faculty Portal</p>
             </div>
           )}
         </div>
@@ -81,8 +82,8 @@ export function Sidebar() {
           </div>
           {!collapsed && (
             <div className="flex-1">
-              <p className="font-medium text-sm">Anupam </p>
-              <p className="text-xs text-sidebar-foreground/60">Computer Science</p>
+              <p className="font-medium text-sm">{user?.name || "Faculty"}</p>
+              <p className="text-xs text-sidebar-foreground/60">Faculty</p>
             </div>
           )}
         </div>
@@ -93,6 +94,10 @@ export function Sidebar() {
             "w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
             collapsed ? "justify-center" : "justify-start"
           )}
+          onClick={() => {
+            logout();
+            navigate("/");
+          }}
         >
           <LogOut className="w-4 h-4" />
           {!collapsed && <span>Log out</span>}
@@ -112,3 +117,4 @@ export function Sidebar() {
     </aside>
   );
 }
+

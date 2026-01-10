@@ -6,25 +6,37 @@ import {
   AlertTriangle, 
   CheckCircle2,
   Loader2,
-  Info
+  Info,
+  Shield,
+  Hash
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AIUsageMeter } from "@/components/dashboard/AIUsageMeter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { generateFileHash, submitToBlockchain, generateAssignmentId, hashStudentId, type AssignmentSubmission } from "@/services/blockchain";
+import { useAuth } from "@/contexts/AuthContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
+import { apiService } from "@/services/api";
 
 export default function AIGenerator() {
   const [prompt, setPrompt] = useState("");
   const [generatedContent, setGeneratedContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [aiDeclared, setAiDeclared] = useState(true);
+  const [aiUsageType, setAiUsageType] = useState<"none" | "partial" | "full">("none");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [fileHash, setFileHash] = useState<string | null>(null);
+  const [selectedAssignment, setSelectedAssignment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedHash, setSubmittedHash] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -38,52 +50,148 @@ export default function AIGenerator() {
 
     setIsGenerating(true);
     
-    // Simulate AI generation
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    setGeneratedContent(`Based on your prompt about "${prompt.slice(0, 50)}...", here's a comprehensive analysis:
-
-## Introduction
-The subject matter presents several key considerations that merit careful examination. This analysis will explore the fundamental concepts and provide actionable insights.
-
-## Key Points
-1. **Primary Consideration**: The core elements establish a foundation for understanding the broader implications.
-
-2. **Supporting Evidence**: Multiple sources corroborate the theoretical framework presented.
-
-3. **Practical Applications**: Real-world implementations demonstrate the viability of proposed solutions.
-
-## Conclusion
-The synthesis of available information suggests a balanced approach that acknowledges both opportunities and challenges inherent in this domain.
-
----
-*AI-generated content - 1,847 tokens used*`);
-    
-    setIsGenerating(false);
-    
-    toast({
-      title: "Content generated!",
-      description: "1,847 tokens used from your monthly quota.",
-    });
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-      toast({
-        title: "File uploaded",
-        description: `${file.name} ready for submission.`,
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch(`${API_URL}/ai/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          maxTokens: 200,
+          temperature: 0.7,
+        }),
       });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "AI generation failed");
+      }
+
+      setGeneratedContent(data.data.content);
+      
+      toast({
+        title: "Content generated!",
+        description: `${data.data.tokensUsed} tokens used. Model: ${data.data.model}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Generation failed",
+        description: error.message || "Failed to generate content. Check if OpenAI API is configured.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const handleSubmit = () => {
-    toast({
-      title: "Assignment submitted!",
-      description: "Your work has been recorded on the blockchain.",
-    });
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      
+      // Generate file hash
+      try {
+        const hash = await generateFileHash(file);
+        setFileHash(hash);
+        toast({
+          title: "File uploaded",
+          description: `${file.name} ready for submission. Hash generated.`,
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to process file. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
   };
+
+  const { user } = useAuth();
+
+  const handleSubmit = async () => {
+    if (!uploadedFile) {
+      toast({
+        title: "No file uploaded",
+        description: "Please upload your assignment file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedAssignment) {
+      toast({
+        title: "No assignment selected",
+        description: "Please select an assignment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!fileHash) {
+      toast({
+        title: "File hash not generated",
+        description: "Please wait for file processing to complete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Use selected assignment or generate new ID
+      const assignmentId = selectedAssignment || generateAssignmentId();
+      const selectedAssignmentData = availableAssignments.find(a => a.id === assignmentId);
+      
+      const studentId = user?.studentId || user?.id || "UNKNOWN";
+      const hashedStudentId = hashStudentId(studentId);
+      
+      // Submit via API (which handles blockchain)
+      const result = await apiService.submitAssignment({
+        file: uploadedFile!,
+        assignmentId,
+        assignmentTitle: selectedAssignmentData?.title || `Assignment ${assignmentId}`,
+        course: selectedAssignmentData?.course || 'General',
+        aiUsageType,
+        aiTokenCount: generatedContent ? 1847 : 0,
+      });
+
+      setSubmittedHash(result.data.blockchainHash);
+
+      toast({
+        title: "Assignment submitted!",
+        description: "Your work has been recorded on the blockchain.",
+      });
+
+      // Navigate to blockchain page after a delay
+      setTimeout(() => {
+        navigate("/blockchain");
+      }, 2000);
+    } catch (error: any) {
+      console.error("Submission error:", error);
+      const errorMessage = error.message || error.error || "Failed to submit to blockchain. Please try again.";
+      toast({
+        title: "Submission failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const availableAssignments = [
+    { id: "1", title: "Machine Learning Project", course: "CS 4510 - Artificial Intelligence" },
+    { id: "2", title: "Database Design Essay", course: "CS 3200 - Databases" },
+    { id: "3", title: "Algorithm Analysis", course: "CS 3100 - Algorithms" },
+  ];
 
   return (
     <MainLayout>
@@ -106,6 +214,29 @@ The synthesis of available information suggests a balanced approach that acknowl
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Assignment Selection */}
+            <div className="glass-card rounded-2xl p-6 space-y-4">
+              <h3 className="font-display font-semibold flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Select Assignment
+              </h3>
+              <div className="space-y-2">
+                <Label htmlFor="assignment">Assignment *</Label>
+                <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an assignment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableAssignments.map((assignment) => (
+                      <SelectItem key={assignment.id} value={assignment.id}>
+                        {assignment.title} - {assignment.course}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {/* File Upload */}
             <div className="glass-card rounded-2xl p-6 space-y-4">
               <h3 className="font-display font-semibold flex items-center gap-2">
@@ -143,9 +274,18 @@ The synthesis of available information suggests a balanced approach that acknowl
                   type="file"
                   className="absolute inset-0 opacity-0 cursor-pointer"
                   onChange={handleFileUpload}
-                  accept=".pdf,.docx,.txt"
+                  accept=".pdf,.docx,.txt,.doc"
                 />
               </div>
+              {fileHash && (
+                <div className="flex items-center gap-2 p-3 bg-blockchain-secondary/30 rounded-lg border border-blockchain/20">
+                  <Hash className="w-4 h-4 text-blockchain" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">File Hash (SHA-256)</p>
+                    <p className="font-mono text-xs truncate">{fileHash}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* AI Generation */}
@@ -200,34 +340,53 @@ The synthesis of available information suggests a balanced approach that acknowl
             {/* AI Declaration */}
             <div className={cn(
               "rounded-2xl p-6 space-y-4 transition-all",
-              aiDeclared 
+              aiUsageType !== "none"
                 ? "bg-ai-secondary border-2 border-ai/30" 
                 : "glass-card"
             )}>
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  {aiDeclared ? (
-                    <CheckCircle2 className="w-6 h-6 text-ai mt-0.5" />
-                  ) : (
-                    <AlertTriangle className="w-6 h-6 text-warning mt-0.5" />
-                  )}
-                  <div>
-                    <h3 className="font-display font-semibold">AI Usage Declaration</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {aiDeclared 
-                        ? "You've declared that this submission includes AI-generated content."
-                        : "Please declare if any part of your submission was AI-generated."
-                      }
-                    </p>
-                  </div>
+              <div className="flex items-start gap-3">
+                {aiUsageType !== "none" ? (
+                  <CheckCircle2 className="w-6 h-6 text-ai mt-0.5" />
+                ) : (
+                  <AlertTriangle className="w-6 h-6 text-warning mt-0.5" />
+                )}
+                <div className="flex-1">
+                  <h3 className="font-display font-semibold mb-3">AI Usage Declaration *</h3>
+                  <RadioGroup value={aiUsageType} onValueChange={(value) => setAiUsageType(value as "none" | "partial" | "full")}>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-secondary/50">
+                        <RadioGroupItem value="none" id="none" />
+                        <Label htmlFor="none" className="flex-1 cursor-pointer">
+                          <div>
+                            <p className="font-medium">No AI Used</p>
+                            <p className="text-xs text-muted-foreground">This submission was created without AI assistance</p>
+                          </div>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-secondary/50">
+                        <RadioGroupItem value="partial" id="partial" />
+                        <Label htmlFor="partial" className="flex-1 cursor-pointer">
+                          <div>
+                            <p className="font-medium">Partially AI-Assisted</p>
+                            <p className="text-xs text-muted-foreground">AI was used for research, outlines, or ideas</p>
+                          </div>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-secondary/50">
+                        <RadioGroupItem value="full" id="full" />
+                        <Label htmlFor="full" className="flex-1 cursor-pointer">
+                          <div>
+                            <p className="font-medium">Fully AI-Generated</p>
+                            <p className="text-xs text-muted-foreground">This submission was primarily generated by AI</p>
+                          </div>
+                        </Label>
+                      </div>
+                    </div>
+                  </RadioGroup>
                 </div>
-                <Switch
-                  checked={aiDeclared}
-                  onCheckedChange={setAiDeclared}
-                />
               </div>
               
-              {aiDeclared && (
+              {aiUsageType !== "none" && (
                 <div className="flex items-start gap-2 p-3 bg-background/50 rounded-lg">
                   <Info className="w-4 h-4 text-ai mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-muted-foreground">
@@ -244,9 +403,38 @@ The synthesis of available information suggests a balanced approach that acknowl
               size="lg" 
               className="w-full"
               onClick={handleSubmit}
+              disabled={isSubmitting || !uploadedFile || !selectedAssignment}
             >
-              Submit & Verify on Blockchain
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Submitting to Blockchain...
+                </>
+              ) : (
+                <>
+                  <Shield className="w-4 h-4" />
+                  Submit & Verify on Blockchain
+                </>
+              )}
             </Button>
+
+            {submittedHash && (
+              <div className="glass-card rounded-2xl p-6 bg-success/10 border-2 border-success/30">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 text-success flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-display font-semibold mb-2">Submission Successful!</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Your assignment has been recorded on the blockchain.
+                    </p>
+                    <div className="flex items-center gap-2 p-2 bg-background/50 rounded-lg">
+                      <Hash className="w-4 h-4 text-blockchain" />
+                      <p className="font-mono text-xs">{submittedHash}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}

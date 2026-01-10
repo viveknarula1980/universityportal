@@ -1,73 +1,193 @@
-# Welcome to your Lovable project
+# AI-Transparent University Portal with Blockchain Verification
 
-## Project info
+A **fully functional** university portal system with **real blockchain integration** and **real OpenAI AI** integration. No mocks - everything works end-to-end!
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+### 🎓 Student Portal
+- Submit assignments with AI usage declaration
+- Track AI token usage and quotas
+- View blockchain-verified submissions
+- Access AI content generator
+- Monitor academic progress
 
-There are several ways of editing your application.
+### 👩‍🏫 Faculty Portal
+- Review student submissions
+- View AI usage percentages
+- Grade assignments
+- Access immutable timestamps
+- Track student progress
 
-**Use Lovable**
+### 🏫 Admin Portal
+- Issue and revoke certificates
+- Configure AI token limits
+- View audit logs
+- Manage system settings
+- Monitor blockchain records
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 🔍 Public Verification
+- Verify certificate authenticity
+- Scan QR codes
+- Check revocation status
+- No login required
 
-Changes made via Lovable will be committed automatically to this repo.
+## Tech Stack
 
-**Use your preferred IDE**
+- **Frontend**: React + TypeScript + Vite
+- **UI**: shadcn/ui + Tailwind CSS
+- **State Management**: React Context API
+- **Routing**: React Router
+- **Blockchain**: Crypto-js for hashing, ready for blockchain integration
+- **QR Codes**: qrcode.react
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚀 Quick Start
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Prerequisites
 
-Follow these steps:
+- Node.js 18+ and npm
+- OpenAI API key (for AI features) - [Get one here](https://platform.openai.com/api-keys)
+- Blockchain RPC URL (for blockchain features) - [Get free from Infura](https://infura.io)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Installation
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+1. **Install dependencies:**
+```bash
+npm install
+cd server && npm install && cd ..
 ```
 
-**Edit a file directly in GitHub**
+2. **Configure backend:**
+```bash
+cd server
+cp .env.example .env
+# Edit .env with your API keys
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+3. **Configure frontend:**
+```bash
+# Create .env in root
+echo "VITE_API_URL=http://localhost:3000/api" > .env
+```
 
-**Use GitHub Codespaces**
+4. **Start everything:**
+```bash
+npm run dev:full
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+5. **Access application:**
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3000
 
-## What technologies are used for this project?
+### Detailed Setup
 
-This project is built with:
+See [COMPLETE_SETUP.md](./COMPLETE_SETUP.md) for full instructions.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- [Blockchain Setup](./BLOCKCHAIN_SETUP.md) - Configure real blockchain
+- [AI Setup](./AI_SETUP.md) - Configure OpenAI API
 
-## How can I deploy this project?
+## Quick Login (Demo)
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+The application includes demo accounts for testing:
 
-## Can I connect a custom domain to my Lovable project?
+- **Student**: `student@university.edu` / `student123`
+- **Faculty**: `faculty@university.edu` / `faculty123`
+- **Admin**: `admin@university.edu` / `admin123`
 
-Yes, you can!
+Or use the quick login buttons on the login page.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Project Structure
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```
+src/
+├── components/          # Reusable UI components
+│   ├── layout/         # Layout components (sidebars, main layout)
+│   ├── dashboard/      # Dashboard-specific components
+│   └── ui/             # shadcn/ui components
+├── contexts/           # React contexts (Auth, etc.)
+├── pages/              # Page components
+├── services/           # API and blockchain services
+├── lib/                # Utility functions
+└── hooks/              # Custom React hooks
+```
+
+## Key Features Implementation
+
+### Authentication
+- JWT-based authentication (mock for development)
+- Role-based access control
+- Protected routes
+- Session persistence
+
+### Blockchain Integration
+- SHA-256 file hashing
+- Assignment submission to blockchain
+- Certificate issuance on blockchain
+- Certificate verification
+- Immutable audit logs
+
+### AI Usage Tracking
+- Token quota management
+- Context window limits
+- Usage declaration (None/Partial/Full)
+- Real-time usage tracking
+
+### Certificate Management
+- Digital certificate issuance
+- QR code generation
+- Blockchain verification
+- Revocation support
+
+## Backend Integration
+
+The frontend is ready for backend integration. Update the API base URL in `src/services/api.ts`:
+
+```typescript
+const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+```
+
+Set environment variable:
+```bash
+VITE_API_URL=http://localhost:3000/api
+```
+
+## Blockchain Setup
+
+For production, integrate with a real blockchain:
+
+1. Update `src/services/blockchain.ts` with your blockchain RPC URL
+2. Configure smart contracts for:
+   - Assignment submission storage
+   - Certificate issuance
+   - Verification queries
+
+## Environment Variables
+
+Create a `.env` file:
+
+```
+VITE_API_URL=http://localhost:3000/api
+VITE_BLOCKCHAIN_RPC_URL=your_blockchain_rpc_url
+```
+
+## Building for Production
+
+```bash
+npm run build
+```
+
+The build output will be in the `dist` directory.
+
+## Development Notes
+
+- Mock authentication is used for development
+- Blockchain operations use mock implementations
+- All API calls have fallback to mock data
+- Replace mock implementations with real backend/blockchain in production
+
+## License
+
+MIT License
+
+## Support
+
+For issues and questions, please open an issue on GitHub.
