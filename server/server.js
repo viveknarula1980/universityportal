@@ -33,14 +33,14 @@ app.use(cors({
       process.env.FRONTEND_URL || 'http://localhost:5173',
       'http://localhost:8080',
       'http://localhost:5173',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'https://ai-assignment-gateway.onrender.com',
+      // Add your frontend deployment URL here when deployed
     ];
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Allow all origins in development
-    }
+    // In production, you might want to restrict this
+    // For now, allow all origins for flexibility
+    callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
