@@ -3,10 +3,7 @@ node_modules/
 server/node_modules/
 
 # Environment variables
-.env
-server/.env
-.env.local
-.env.production
+
 
 # Database
 server/data/
