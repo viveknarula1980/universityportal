@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { icon: Settings, label: "Admin Dashboard", path: "/admin" },
   { icon: GraduationCap, label: "Issue Certificate", path: "/certificate-issuance" },
-  { icon: Users, label: "Faculty View", path: "/faculty" },
   { icon: Link2, label: "Blockchain", path: "/blockchain" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];

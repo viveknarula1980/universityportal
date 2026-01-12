@@ -9,55 +9,81 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { apiService } from "@/services/api";
 
-const assignments = [
-  {
-    title: "Machine Learning Project",
-    course: "CS 4510 - Artificial Intelligence",
-    dueDate: "Jan 15, 2026",
-    status: "pending" as const,
-  },
-  {
-    title: "Database Design Essay",
-    course: "CS 3200 - Databases",
-    dueDate: "Jan 12, 2026",
-    status: "submitted" as const,
-    aiUsed: true,
-    blockchainVerified: true,
-  },
-  {
-    title: "Algorithm Analysis",
-    course: "CS 3100 - Algorithms",
-    dueDate: "Jan 8, 2026",
-    status: "graded" as const,
-    grade: "A-",
-    blockchainVerified: true,
-  },
-];
+interface DashboardStats {
+  total: number;
+  completed: number;
+  pending: number;
+  aiAssisted: number;
+}
+
+interface RecentAssignment {
+  id: string;
+  title: string;
+  course: string;
+  dueDate: string;
+  status: "pending" | "submitted" | "graded" | "late";
+  aiUsed?: boolean;
+  blockchainVerified?: boolean;
+  grade?: string | null;
+}
+
+interface ActivityItem {
+  icon: string;
+  title: string;
+  description: string;
+  time: string;
+  type: string;
+}
 
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [stats, setStats] = useState({
-    total: 12,
-    completed: 8,
-    pending: 4,
-    aiAssisted: 5,
+  const [stats, setStats] = useState<DashboardStats>({
+    total: 0,
+    completed: 0,
+    pending: 0,
+    aiAssisted: 0,
   });
+  const [assignments, setAssignments] = useState<RecentAssignment[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [aiUsage, setAiUsage] = useState({ used: 0, total: 25000 });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch real data from API
-    const fetchData = async () => {
+    // Fetch all dashboard data
+    const fetchDashboardData = async () => {
       try {
-        const response = await apiService.getAssignments();
-        if (response.success && response.data) {
-          // Update stats based on real data
-          // setStats(calculateStats(response.data));
+        setLoading(true);
+        
+        // Fetch dashboard stats and assignments
+        const dashboardResponse = await apiService.getDashboardData();
+        if (dashboardResponse.success && dashboardResponse.data) {
+          setStats(dashboardResponse.data.stats || {
+            total: 0,
+            completed: 0,
+            pending: 0,
+            aiAssisted: 0,
+          });
+          setAssignments(dashboardResponse.data.recentAssignments || []);
+          setRecentActivity(dashboardResponse.data.recentActivity || []);
+        }
+
+        // Fetch AI usage
+        const aiUsageResponse = await apiService.getAIUsage();
+        if (aiUsageResponse.success && aiUsageResponse.data) {
+          setAiUsage({
+            used: aiUsageResponse.data.used || 0,
+            total: aiUsageResponse.data.limit || 25000,
+          });
         }
       } catch (error) {
-        console.error("Failed to fetch assignments:", error);
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchData();
+    
+    fetchDashboardData();
   }, []);
 
   return (
@@ -108,8 +134,8 @@ const Index = () => {
 
         {/* AI Usage & Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <AIUsageMeter used={18500} total={25000} />
-          <RecentActivity />
+          <AIUsageMeter used={aiUsage.used} total={aiUsage.total} />
+          <RecentActivity activities={recentActivity} />
         </div>
 
         {/* Assignments */}
@@ -123,20 +149,34 @@ const Index = () => {
               View all →
             </button>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {assignments.map((assignment, index) => (
-              <div
-                key={assignment.title}
-                className="animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <AssignmentCard
-                  {...assignment}
-                  onSubmit={() => navigate("/ai-generator")}
-                />
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading assignments...</div>
+          ) : assignments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No assignments found. Submit your first assignment to get started!
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {assignments.map((assignment, index) => (
+                <div
+                  key={assignment.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <AssignmentCard
+                    title={assignment.title}
+                    course={assignment.course}
+                    dueDate={assignment.dueDate}
+                    status={assignment.status}
+                    aiUsed={assignment.aiUsed}
+                    blockchainVerified={assignment.blockchainVerified}
+                    grade={assignment.grade || undefined}
+                    onSubmit={() => navigate("/ai-generator")}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>

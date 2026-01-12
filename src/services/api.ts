@@ -105,6 +105,10 @@ class ApiService {
     return this.request("/assignments/submissions");
   }
 
+  async getDashboardData() {
+    return this.request("/assignments/dashboard");
+  }
+
   // Certificate APIs
   async issueCertificate(certificate: {
     studentId: string;
@@ -134,7 +138,7 @@ class ApiService {
   }
 
   // Faculty APIs
-  async getSubmissions(filters?: {
+  async getFacultySubmissions(filters?: {
     course?: string;
     status?: string;
     search?: string;
@@ -144,17 +148,66 @@ class ApiService {
     if (filters?.status) queryParams.append("status", filters.status);
     if (filters?.search) queryParams.append("search", filters.search);
 
-    return this.request(`/faculty/submissions?${queryParams.toString()}`);
+    return this.request(`/assignments/faculty/submissions?${queryParams.toString()}`);
+  }
+
+  async getSubmissionDetails(submissionId: string) {
+    return this.request(`/assignments/submissions/${submissionId}`);
+  }
+
+  async downloadSubmissionFile(submissionId: string) {
+    const token = this.getToken();
+    const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    const response = await fetch(`${API_BASE_URL}/assignments/submissions/${submissionId}/download`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to download file');
+    }
+    
+    // Extract filename from Content-Disposition header
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = `submission-${submissionId}`;
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (filenameMatch && filenameMatch[1]) {
+        // Remove quotes if present and decode URI
+        filename = filenameMatch[1].replace(/['"]/g, '');
+        try {
+          filename = decodeURIComponent(filename);
+        } catch (e) {
+          // If decoding fails, use as is
+        }
+      }
+    }
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   }
 
   async gradeSubmission(submissionId: string, grade: string) {
-    return this.request(`/faculty/submissions/${submissionId}/grade`, {
+    return this.request(`/assignments/submissions/${submissionId}/grade`, {
       method: "POST",
       body: JSON.stringify({ grade }),
     });
   }
 
   // Admin APIs
+  async getAdminStats() {
+    return this.request("/admin/stats");
+  }
+
   async updateAILimits(limits: {
     tokensPerSemester: number;
     contextWindow: number;
@@ -169,8 +222,12 @@ class ApiService {
     return this.request("/admin/ai-limits");
   }
 
-  async getAuditLogs() {
-    return this.request("/admin/audit-logs");
+  async getAuditLogs(limit?: number, offset?: number) {
+    const queryParams = new URLSearchParams();
+    if (limit) queryParams.append("limit", limit.toString());
+    if (offset) queryParams.append("offset", offset.toString());
+    const query = queryParams.toString();
+    return this.request(`/admin/audit-logs${query ? `?${query}` : ''}`);
   }
 
   // Blockchain APIs
@@ -180,6 +237,10 @@ class ApiService {
 
   async getBlockchainRecord(hash: string) {
     return this.request(`/blockchain/records/${hash}`);
+  }
+
+  async getCertificateBlockchainRecords() {
+    return this.request("/certificates/blockchain-records");
   }
 
   // AI APIs

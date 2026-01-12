@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { StudentSidebar } from "./StudentSidebar";
 import { FacultySidebar } from "./FacultySidebar";
 import { AdminSidebar } from "./AdminSidebar";
@@ -11,12 +12,17 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, role }: MainLayoutProps) {
   const location = useLocation();
+  const { user } = useAuth();
   
-  // Auto-detect role from path if not provided
+  // Determine role: use prop first, then user's role, then detect from path
   let detectedRole: "student" | "faculty" | "admin" = "student";
   if (role) {
     detectedRole = role;
+  } else if (user?.role) {
+    // Use the actual user's role from auth context
+    detectedRole = user.role as "student" | "faculty" | "admin";
   } else {
+    // Fallback to path detection
     if (location.pathname.startsWith("/faculty")) {
       detectedRole = "faculty";
     } else if (location.pathname.startsWith("/admin") || location.pathname.startsWith("/certificate-issuance")) {

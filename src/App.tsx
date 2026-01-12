@@ -85,6 +85,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/faculty/submissions"
+              element={
+                <ProtectedRoute requiredRole="faculty">
+                  <FacultyDashboard />
+                </ProtectedRoute>
+              }
+            />
             
             {/* Admin Routes */}
             <Route

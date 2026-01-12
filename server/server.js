@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.js';
 import assignmentRoutes from './routes/assignments.js';
 import certificateRoutes from './routes/certificates.js';
 import aiRoutes from './routes/ai.js';
+import adminRoutes from './routes/admin.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -79,6 +80,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

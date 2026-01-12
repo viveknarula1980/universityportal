@@ -56,8 +56,22 @@ router.post('/generate', authenticateToken, [
       usageId,
       req.user.id,
       result.tokensUsed,
-      maxTokens || 200,
+      result.contextWindow || maxTokens || 200,
       semester,
+      Date.now()
+    ]);
+
+    // Log to audit logs for activity tracking
+    await db.runAsync(`
+      INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, timestamp)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      req.user.id,
+      'ai_content_generated',
+      'ai_usage',
+      usageId,
+      `Generated content using ${result.tokensUsed} tokens`,
       Date.now()
     ]);
 

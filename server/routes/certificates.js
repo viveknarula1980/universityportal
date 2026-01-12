@@ -244,6 +244,30 @@ router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
   }
 });
 
+// Get certificate blockchain records for admin
+router.get('/blockchain-records', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const certificates = await db.allAsync(`
+      SELECT 
+        c.*,
+        u.student_id,
+        br.blockchain_hash as data_hash,
+        br.block_number,
+        br.timestamp as blockchain_timestamp
+      FROM certificates c
+      JOIN users u ON c.student_id = u.id
+      LEFT JOIN blockchain_records br ON br.record_id = c.id AND br.record_type = 'certificate'
+      WHERE c.blockchain_hash IS NOT NULL
+      ORDER BY c.created_at DESC
+    `);
+    
+    res.json({ success: true, data: certificates });
+  } catch (error) {
+    console.error('Error fetching certificate blockchain records:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch certificate blockchain records' });
+  }
+});
+
 // Revoke certificate
 router.post('/:certificateId/revoke', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
