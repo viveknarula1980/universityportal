@@ -67,7 +67,25 @@ async function initializeServices() {
   
   // AI service initializes in constructor
   if (aiService.isConfigured()) {
-    console.log('✅ AI service ready');
+    console.log('🔍 Validating OpenAI API key...');
+    try {
+      const validation = await aiService.validateApiKey();
+      if (validation.valid) {
+        console.log('✅ AI service ready - API key validated');
+      } else {
+        console.log('⚠️  AI service configured but API key validation failed:');
+        console.log(`   ${validation.error || 'Unknown error'}`);
+        if (validation.error && validation.error.includes('permissions')) {
+          console.log('   💡 Fix: Create a new API key with full permissions at https://platform.openai.com/api-keys');
+          console.log('   ⚠️  NOTE: "model.read" is NOT enough - you need "model.request" scope');
+          console.log('   💡 "Read" only lets you view models, "Request" lets you actually use them');
+          console.log('   💡 Or ensure your restricted key has the "model.request" scope enabled (not just "model.read")');
+        }
+      }
+    } catch (error) {
+      console.log('⚠️  Could not validate API key:', error.message);
+      console.log('   AI service may still work, but errors may occur during generation');
+    }
   } else {
     console.log('⚠️  AI service not configured (set OPENAI_API_KEY in .env)');
   }

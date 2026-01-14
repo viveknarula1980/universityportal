@@ -9,7 +9,7 @@ const router = express.Router();
 // Generate AI content
 router.post('/generate', authenticateToken, [
   body('prompt').notEmpty().withMessage('Prompt is required'),
-  body('maxTokens').optional().isInt({ min: 1, max: 400 }),
+  body('maxTokens').optional().isInt({ min: 1, max: 128000 }), // GPT-5-nano supports up to 128k output tokens
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -24,7 +24,7 @@ router.post('/generate', authenticateToken, [
       return res.status(503).json({
         success: false,
         error: 'AI service not configured',
-        message: 'Please configure OPENAI_API_KEY in server/.env file'
+        message: 'Please configure OPENAI_API_KEY or GEMINI_API_KEY in server/.env file'
       });
     }
 
@@ -41,8 +41,9 @@ router.post('/generate', authenticateToken, [
     }
 
     // Generate content
+    // Default to 8000 tokens for assignments - GPT-5-nano supports up to 128k
     const result = await aiService.generateContent(prompt, {
-      maxTokens: maxTokens || 200,
+      maxTokens: maxTokens || 8000,
       temperature: temperature || 0.7,
       systemPrompt: systemPrompt
     });
@@ -126,17 +127,60 @@ router.get('/usage', authenticateToken, async (req, res) => {
 });
 
 // Check AI service status
-router.get('/status', authenticateToken, (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      configured: aiService.isConfigured(),
-      model: aiService.model || 'not-configured',
-      message: aiService.isConfigured() 
-        ? 'AI service is ready' 
-        : 'Configure OPENAI_API_KEY in .env to enable AI features'
+router.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const validation = await aiService.validateApiKey();
+    
+    res.json({
+      success: true,
+      data: {
+        configured: aiService.isConfigured(),
+        model: aiService.model || 'not-configured',
+        valid: validation.valid,
+        message: validation.valid 
+          ? 'AI service is ready' 
+          : validation.error || 'Configure OPENAI_API_KEY in .env to enable AI features',
+        error: validation.error || null
+      }
+    });
+  } catch (error) {
+    res.json({
+      success: true,
+      data: {
+        configured: aiService.isConfigured(),
+        model: aiService.model || 'not-configured',
+        valid: false,
+        message: 'Error checking API key status',
+        error: error.message
+      }
+    });
+  }
+});
+
+// Validate API key (more detailed check)
+router.get('/validate', authenticateToken, async (req, res) => {
+  try {
+    const validation = await aiService.validateApiKey();
+    
+    if (validation.valid) {
+      res.json({
+        success: true,
+        data: validation
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: validation.error,
+        data: validation
+      });
     }
-  });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to validate API key',
+      message: error.message
+    });
+  }
 });
 
 export default router;

@@ -62,7 +62,7 @@ export default function AIGenerator() {
         },
         body: JSON.stringify({
           prompt: prompt,
-          maxTokens: 200,
+          maxTokens: 8000, // Increased for assignments - GPT-5-nano supports up to 128k
           temperature: 0.7,
         }),
       });
