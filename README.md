@@ -177,12 +177,6 @@ npm run build
 
 The build output will be in the `dist` directory.
 
-## Development Notes
-
-- Mock authentication is used for development
-- Blockchain operations use mock implementations
-- All API calls have fallback to mock data
-- Replace mock implementations with real backend/blockchain in production
 
 ## License
 
