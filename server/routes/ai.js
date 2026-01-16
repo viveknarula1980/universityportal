@@ -19,6 +19,19 @@ router.post('/generate', authenticateToken, [
 
     const { prompt, maxTokens, temperature, systemPrompt } = req.body;
 
+    // Validate prompt word count (limit to 30 words)
+    const maxWords = parseInt(process.env.AI_PROMPT_MAX_WORDS) || 30;
+    const wordCount = prompt.trim().split(/\s+/).filter(word => word.length > 0).length;
+    
+    if (wordCount > maxWords) {
+      return res.status(400).json({
+        success: false,
+        error: `Prompt is too long. Maximum ${maxWords} words allowed, but you provided ${wordCount} words.`,
+        wordCount: wordCount,
+        maxWords: maxWords
+      });
+    }
+
     // Check AI service status
     if (!aiService.isConfigured()) {
       return res.status(503).json({
@@ -111,13 +124,32 @@ router.get('/usage', authenticateToken, async (req, res) => {
     const totalUsed = usage?.total_used || 0;
     const tokensPerSemester = limit?.tokens_per_semester || 80000;
 
+    // Calculate days until semester end (resets)
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    // Semester ends: Spring (May 31) or Fall (December 31)
+    // Month is 0-indexed: 0=Jan, 4=May, 5=Jun, 11=Dec
+    let semesterEnd;
+    if (currentMonth < 6) {
+      // Spring semester (Jan-May) - ends May 31
+      semesterEnd = new Date(currentYear, 4, 31); // Month 4 = May (0-indexed)
+    } else {
+      // Fall semester (Jun-Dec) - ends December 31
+      semesterEnd = new Date(currentYear, 11, 31); // Month 11 = December (0-indexed)
+    }
+    
+    const daysUntilReset = Math.max(0, Math.ceil((semesterEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+
     res.json({
       success: true,
       data: {
         used: totalUsed,
         limit: tokensPerSemester,
         remaining: Math.max(0, tokensPerSemester - totalUsed),
-        percentage: ((totalUsed / tokensPerSemester) * 100).toFixed(2)
+        percentage: ((totalUsed / tokensPerSemester) * 100).toFixed(2),
+        daysUntilReset: daysUntilReset
       }
     });
   } catch (error) {

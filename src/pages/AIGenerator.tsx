@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Sparkles, 
   Upload, 
@@ -35,14 +35,48 @@ export default function AIGenerator() {
   const [selectedAssignment, setSelectedAssignment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedHash, setSubmittedHash] = useState<string | null>(null);
+  const [aiUsage, setAiUsage] = useState({ used: 0, total: 25000, daysUntilReset: 0 });
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Fetch AI usage data
+  useEffect(() => {
+    const fetchAIUsage = async () => {
+      try {
+        const response = await apiService.getAIUsage();
+        if (response.success && response.data) {
+          setAiUsage({
+            used: response.data.used || 0,
+            total: response.data.limit || 25000,
+            daysUntilReset: response.data.daysUntilReset,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch AI usage:', error);
+      }
+    };
+    
+    fetchAIUsage();
+  }, []);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       toast({
         title: "Please enter a prompt",
         description: "Describe what you want the AI to help you with.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate word count (max 30 words)
+    const maxWords = 30;
+    const wordCount = prompt.trim().split(/\s+/).filter(word => word.length > 0).length;
+    
+    if (wordCount > maxWords) {
+      toast({
+        title: "Prompt too long",
+        description: `Maximum ${maxWords} words allowed. You entered ${wordCount} words. Please shorten your prompt.`,
         variant: "destructive",
       });
       return;
@@ -74,6 +108,20 @@ export default function AIGenerator() {
       }
 
       setGeneratedContent(data.data.content);
+      
+      // Update AI usage after generation
+      try {
+        const usageResponse = await apiService.getAIUsage();
+        if (usageResponse.success && usageResponse.data) {
+          setAiUsage({
+            used: usageResponse.data.used || 0,
+            total: usageResponse.data.limit || 25000,
+            daysUntilReset: usageResponse.data.daysUntilReset,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to update AI usage:', error);
+      }
       
       toast({
         title: "Content generated!",
@@ -296,14 +344,30 @@ export default function AIGenerator() {
               </h3>
               
               <div className="space-y-2">
-                <Label htmlFor="prompt">Your Prompt</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="prompt">Your Prompt</Label>
+                  <span className={cn(
+                    "text-xs",
+                    prompt.trim().split(/\s+/).filter(word => word.length > 0).length > 30 
+                      ? "text-red-500 font-semibold" 
+                      : "text-muted-foreground"
+                  )}>
+                    {prompt.trim().split(/\s+/).filter(word => word.length > 0).length} / 30 words
+                  </span>
+                </div>
                 <Textarea
                   id="prompt"
-                  placeholder="Describe what you want the AI to help you with..."
+                  placeholder="Describe what you want the AI to help you with... (max 30 words)"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   className="min-h-[120px] resize-none"
+                  maxLength={500}
                 />
+                {prompt.trim().split(/\s+/).filter(word => word.length > 0).length > 30 && (
+                  <p className="text-xs text-red-500">
+                    ⚠️ Prompt exceeds 30 words. Please shorten it.
+                  </p>
+                )}
               </div>
 
               <Button 
@@ -439,7 +503,7 @@ export default function AIGenerator() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <AIUsageMeter used={18500} total={25000} />
+            <AIUsageMeter used={aiUsage.used} total={aiUsage.total} daysUntilReset={aiUsage.daysUntilReset} />
             
             <div className="glass-card rounded-2xl p-6 space-y-4">
               <h3 className="font-display font-semibold">Usage Guidelines</h3>

@@ -46,7 +46,7 @@ const Index = () => {
   });
   const [assignments, setAssignments] = useState<RecentAssignment[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
-  const [aiUsage, setAiUsage] = useState({ used: 0, total: 25000 });
+  const [aiUsage, setAiUsage] = useState({ used: 0, total: 25000, daysUntilReset: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -74,6 +74,7 @@ const Index = () => {
           setAiUsage({
             used: aiUsageResponse.data.used || 0,
             total: aiUsageResponse.data.limit || 25000,
+            daysUntilReset: aiUsageResponse.data.daysUntilReset || 0,
           });
         }
       } catch (error) {
@@ -134,7 +135,7 @@ const Index = () => {
 
         {/* AI Usage & Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <AIUsageMeter used={aiUsage.used} total={aiUsage.total} />
+          <AIUsageMeter used={aiUsage.used} total={aiUsage.total} daysUntilReset={aiUsage.daysUntilReset} />
           <RecentActivity activities={recentActivity} />
         </div>
 

@@ -5,9 +5,10 @@ interface AIUsageMeterProps {
   used: number;
   total: number;
   className?: string;
+  daysUntilReset?: number;
 }
 
-export function AIUsageMeter({ used, total, className }: AIUsageMeterProps) {
+export function AIUsageMeter({ used, total, className, daysUntilReset }: AIUsageMeterProps) {
   const percentage = (used / total) * 100;
   const isLow = percentage >= 80;
   const isEmpty = percentage >= 100;
@@ -58,7 +59,9 @@ export function AIUsageMeter({ used, total, className }: AIUsageMeterProps) {
 
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>{Math.round(100 - percentage)}% remaining</span>
-          <span>Resets in 12 days</span>
+          {daysUntilReset !== undefined && (
+            <span>Resets in {daysUntilReset} {daysUntilReset === 1 ? 'day' : 'days'}</span>
+          )}
         </div>
       </div>
     </div>
