@@ -138,10 +138,13 @@ router.post('/login', [
     const email = rawEmail ? rawEmail.toLowerCase() : '';
 
     // Find user
+    console.log(`🔍 Login attempt for: ${email}`);
     const user = await db.getAsync('SELECT * FROM users WHERE email = ?', [email]);
     if (!user) {
+      console.log(`❌ User not found in DB: ${email}`);
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
+    console.log(`✅ User found: ${user.id} (${user.role})`);
 
     // Verify password
     const validPassword = await bcrypt.compare(password, user.password_hash);
