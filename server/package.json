@@ -10,21 +10,29 @@
     "migrate": "node scripts/migrate.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "jsonwebtoken": "^9.0.2",
+    "axios": "^1.13.6",
     "bcryptjs": "^2.4.3",
-    "multer": "^1.4.5-lts.1",
-    "sqlite3": "^5.1.6",
-    "ethers": "^6.9.0",
-    "openai": "^4.20.1",
-    "qrcode": "^1.5.3",
+    "cheerio": "^1.1.0",
+    "cloudinary": "^1.41.3",
+    "cors": "^2.8.5",
     "crypto": "^1.0.1",
-    "express-validator": "^7.0.1"
+    "dotenv": "^16.3.1",
+    "ethers": "^6.9.0",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "google-auth-library": "^9.14.0",
+    "googleapis": "^142.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0",
+    "nodemailer": "^6.9.14",
+    "openai": "^4.20.1",
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.20.0",
+    "qrcode": "^1.5.3",
+    "sqlite3": "^5.1.6"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
   }
 }
-

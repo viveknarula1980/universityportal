@@ -3,6 +3,19 @@ import { authenticateToken, requireRole } from '../middleware/auth.js';
 import { aiService } from '../services/ai.js';
 import { body, validationResult } from 'express-validator';
 import db from '../database/db.js';
+import multer from 'multer';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const { PDFParse } = require('pdf-parse');
+
+// Configure multer for PDF uploads (memory storage)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
 
 const router = express.Router();
 
@@ -155,6 +168,219 @@ router.get('/usage', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching AI usage:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch usage' });
+  }
+});
+
+// Get AI Career Recommendations
+router.get('/recommendations', authenticateToken, async (req, res) => {
+  try {
+    // 1. Fetch user's background (certificates / department)
+    const user = await db.getAsync('SELECT name, department, role FROM users WHERE id = ?', [req.user.id]);
+    
+    // Fetch certificates
+    const certificates = await db.allAsync(`
+      SELECT degree_name as degreeName, degree_type as degreeType 
+      FROM certificates 
+      WHERE student_id = ? AND (revocation_status = 0 OR revocation_status IS NULL)
+    `, [req.user.id]);
+
+    // 2. Build Context String
+    let contextStr = `Student Name: ${user.name}\nDepartment: ${user.department || 'Not specified'}\n`;
+    if (certificates && certificates.length > 0) {
+      contextStr += `Degrees/Certificates:\n`;
+      certificates.forEach(cert => {
+        contextStr += `- ${cert.degreeType} in ${cert.degreeName}\n`;
+      });
+    } else {
+      contextStr += `No advanced degrees issued yet. Currently pursuing studies.\n`;
+    }
+
+    // 3. Formulate AI Prompt
+    const systemPrompt = `You are an expert academic and career advisor. Given a student's academic background, recommend 3 relevant internships and 3 courses to help advance their career.
+Return ONLY a valid JSON object matching the EXACT structure below. Do not include any explanations or markdown outside the JSON.
+{
+  "internships": [ { "title": "...", "company": "...", "description": "...", "matchReason": "...", "link": "https://..." } ],
+  "courses": [ { "title": "...", "platform": "...", "description": "...", "matchReason": "...", "link": "https://..." } ]
+}`;
+
+    const prompt = `Please provide exactly 3 internship and 3 course recommendations for the following student profile:\n\n${contextStr}`;
+
+    // 4. Generate AI Content
+    const result = await aiService.generateContent(prompt, {
+      maxTokens: 1500,
+      temperature: 0.7,
+      systemPrompt: systemPrompt
+    });
+
+    let suggestionsData = { internships: [], courses: [] };
+    
+    // 5. Parse JSON safely
+    try {
+      let content = result.content;
+      // Extract everything between the first '{' and last '}'
+      const startIndex = content.indexOf('{');
+      const endIndex = content.lastIndexOf('}');
+      if (startIndex !== -1 && endIndex !== -1) {
+        content = content.substring(startIndex, endIndex + 1);
+      }
+      suggestionsData = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse AI recommendations JSON. Raw content:', result.content);
+      // Fallback data if AI parsing fails
+      suggestionsData = {
+        internships: [
+          { title: 'Software Engineering Intern', company: 'Google', description: 'Work on cutting-edge web applications.', matchReason: 'Strong foundation in engineering.', link: 'https://careers.google.com/students/' },
+          { title: 'Data Analytics Intern', company: 'Microsoft', description: 'Analyze large datasets for business insights.', matchReason: 'Relevant analytical skills.', link: 'https://careers.microsoft.com/students/' },
+          { title: 'Product Management Intern', company: 'Atlassian', description: 'Help define product strategy and roadmap.', matchReason: 'Good mix of technical and soft skills.', link: 'https://www.atlassian.com/company/careers/students' }
+        ],
+        courses: [
+          { title: 'Advanced React and Next.js', platform: 'Udemy', description: 'Master modern web development using React.', matchReason: 'Highly requested skill in the current market.', link: 'https://www.udemy.com' },
+          { title: 'Machine Learning A-Z', platform: 'Coursera', description: 'Learn to create Machine Learning algorithms.', matchReason: 'Great for expanding technical breadth.', link: 'https://www.coursera.org/learn/machine-learning' },
+          { title: 'Agile Project Management', platform: 'edX', description: 'Learn agile methodologies for project delivery.', matchReason: 'Essential for modern software teams.', link: 'https://www.edx.org' }
+        ]
+      };
+    }
+
+    res.json({ success: true, data: suggestionsData });
+
+  } catch (error) {
+    console.error('AI Recommendations error:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate recommendations' });
+  }
+});
+
+// --- AI CV Builder Endpoint ---
+router.post('/analyze-cv', authenticateToken, upload.single('cv'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No CV PDF file uploaded' });
+    }
+
+    // 1. Parse PDF using pdf-parse v2 object-oriented API
+    const parser = new PDFParse({ data: req.file.buffer });
+    const data = await parser.getText();
+    const cvText = data.text;
+    await parser.destroy();
+
+    if (!cvText || cvText.trim().length === 0) {
+      return res.status(400).json({ success: false, error: 'Could not extract text from the PDF. It might be scanned or empty.' });
+    }
+
+    // 2. Build Prompt
+    const systemPrompt = `You are an expert tech recruiter and ATS (Applicant Tracking System) optimizer. 
+Evaluate the provided CV text. Provide an original ATS score (0-100), actionable feedback, a completely rewritten and professionally formatted version using strong action verbs, and an improved ATS score.
+CRITICAL INSTRUCTION: The "improvedCV" MUST be formatted in strict Markdown. Use heading tags (e.g. ## Experience, ### Projects) and bulleted lists (- ) for readability.
+Return ONLY a valid JSON object matching this EXACT structure:
+{
+  "originalScore": 65,
+  "feedback": ["...", "..."],
+  "improvedScore": 95,
+  "improvedCV": "# John Doe\n\n## Experience\n\n- Improved application performance..."
+}`;
+
+    const prompt = `Please analyze, rewrite, and properly Markdown-format the following CV:\n\n${cvText}`;
+
+    const result = await aiService.generateContent(prompt, {
+      maxTokens: 16000,
+      temperature: 0.7,
+      systemPrompt: systemPrompt
+    });
+
+    let suggestionsData;
+    try {
+      let content = result.content;
+      const startIndex = content.indexOf('{');
+      const endIndex = content.lastIndexOf('}');
+      if (startIndex !== -1 && endIndex !== -1) {
+        content = content.substring(startIndex, endIndex + 1);
+      }
+      suggestionsData = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse CV JSON:', parseError);
+      return res.status(500).json({ success: false, error: 'AI failed to return valid optimization data.' });
+    }
+
+    res.json({ success: true, data: suggestionsData });
+
+  } catch (error) {
+    console.error('CV Analysis error:', error);
+    res.status(500).json({ success: false, error: 'Failed to process CV' });
+  }
+});
+
+// --- LinkedIn Analyzer Endpoint ---
+router.post('/analyze-linkedin', authenticateToken, [
+  body('url').isURL().withMessage('Valid LinkedIn URL is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, error: errors.array()[0].msg });
+    }
+
+    const { url } = req.body;
+    
+    // Validate if it's linkedin
+    if (!url.includes('linkedin.com/')) {
+       return res.status(400).json({ success: false, error: 'Must be a valid LinkedIn profile URL (linkedin.com/in/...)' });
+    }
+
+    // Attempt to fetch public snippet
+    let profileText = "";
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5'
+        },
+        timeout: 8000
+      });
+      const $ = cheerio.load(response.data);
+      $('script, style, link, meta').remove();
+      profileText = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 3000); 
+    } catch (fetchError) {
+      console.error('LinkedIn fetch bounded:', fetchError.message);
+    }
+
+    const systemPrompt = `You are an expert career coach. Analyze a user's LinkedIn profile presence. 
+Normally you'd read the profile, but due to privacy protections you may only have partial data.
+Provide a Profile Score (0-100) and 3 to 5 actionable improvement tips.
+Return ONLY a valid JSON object matching this EXACT structure:
+{
+  "score": 75,
+  "tips": ["Add a professional headshot", "Use a banner image", "Write a strong summary"]
+}`;
+    
+    const prompt = profileText.length > 200 
+      ? `Here is the extracted public text from their LinkedIn profile (${url}):\n\n${profileText}\n\nAnalyze it.` 
+      : `I am linking my profile: ${url}. Due to privacy blocks, public text extraction failed. Please provide standard best practices for optimizing a LinkedIn profile url specifically for a student looking for tech jobs.`;
+
+    const result = await aiService.generateContent(prompt, {
+      maxTokens: 8000,
+      temperature: 0.7,
+      systemPrompt: systemPrompt
+    });
+
+    let data;
+    try {
+      let content = result.content;
+      const startIndex = content.indexOf('{');
+      const endIndex = content.lastIndexOf('}');
+      if (startIndex !== -1 && endIndex !== -1) {
+        content = content.substring(startIndex, endIndex + 1);
+      }
+      data = JSON.parse(content);
+    } catch (parseError) {
+      console.error('LinkedIn JSON parsing failed', parseError);
+      return res.status(500).json({ success: false, error: 'AI failed to return valid analysis.' });
+    }
+
+    res.json({ success: true, data });
+
+  } catch (error) {
+    console.error('LinkedIn analysis error:', error);
+    res.status(500).json({ success: false, error: 'Failed to analyze LinkedIn profile' });
   }
 });
 

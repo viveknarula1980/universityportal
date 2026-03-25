@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
-  Settings,
+  LayoutDashboard,
   GraduationCap,
   Users,
   Link2,
   User,
+  Settings,
   LogOut,
   ChevronLeft
 } from "lucide-react";
@@ -14,7 +15,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { icon: Settings, label: "Admin Dashboard", path: "/admin" },
+  { icon: LayoutDashboard, label: "Admin Dashboard", path: "/admin?tab=certificates" },
+  { icon: Users, label: "Manage Users", path: "/admin?tab=users" },
   { icon: GraduationCap, label: "Issue Certificate", path: "/certificate-issuance" },
   { icon: Link2, label: "Blockchain", path: "/blockchain" },
   { icon: Settings, label: "Settings", path: "/settings" },

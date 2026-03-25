@@ -8,15 +8,8 @@ import db from '../database/db.js';
 import { blockchainService } from '../services/blockchain.js';
 import { generateAssignmentId } from '../utils/helpers.js';
 
+import { upload } from '../services/storage.js';
 const router = express.Router();
-
-// Configure multer for file uploads
-const upload = multer({
-  dest: process.env.UPLOAD_DIR || './uploads',
-  limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024 // 10MB
-  }
-});
 
 // Submit assignment
 router.post('/submit', authenticateToken, requireRole('student'), upload.single('file'), async (req, res) => {
@@ -58,8 +51,15 @@ router.post('/submit', authenticateToken, requireRole('student'), upload.single(
     }
 
     // Calculate file hash
-    const fileBuffer = readFileSync(req.file.path);
-    const fileHash = createHash('sha256').update(fileBuffer).digest('hex');
+    let fileHash;
+    if (req.file.buffer) {
+      fileHash = createHash('sha256').update(req.file.buffer).digest('hex');
+    } else if (req.file.path && !req.file.path.startsWith('http')) {
+      const fileBuffer = readFileSync(req.file.path);
+      fileHash = createHash('sha256').update(fileBuffer).digest('hex');
+    } else {
+      fileHash = req.body.fileHash || createHash('sha256').update(req.file.path).digest('hex');
+    }
 
     // Prepare submission data
     const submissionId = `sub-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -123,7 +123,7 @@ router.post('/submit', authenticateToken, requireRole('student'), upload.single(
       req.user.id,
       req.file.path,
       fileHash,
-      req.file.originalname || req.file.filename, // Store original filename
+      req.file.originalname || req.file.filename,
       aiUsageType,
       parseInt(aiTokenCount) || 0,
       blockchainResult.hash,

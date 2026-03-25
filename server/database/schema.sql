@@ -7,8 +7,19 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT NOT NULL CHECK(role IN ('student', 'faculty', 'admin')),
     student_id TEXT,
     department TEXT,
+    google_id TEXT UNIQUE,
+    is_verified BOOLEAN DEFAULT 0,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
+);
+
+-- OTP Codes Table
+CREATE TABLE IF NOT EXISTS otp_codes (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    code TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
 );
 
 -- Assignments Table

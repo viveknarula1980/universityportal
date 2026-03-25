@@ -20,6 +20,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/api";
 import { useParams } from "react-router-dom";
+import QRScanner from "@/components/QRScanner";
 
 interface CertificateVerification {
   certificateId: string;
@@ -31,15 +32,44 @@ interface CertificateVerification {
   studentName?: string;
 }
 
+interface CertificateData {
+  id?: string;
+  certificateId?: string;
+  degree_name?: string;
+  degreeName?: string;
+  university_name?: string;
+  universityName?: string;
+  issue_date?: string | number;
+  issueDate?: string | number;
+  status?: string;
+  revocation_status?: number;
+  blockchain_hash?: string;
+  blockchainHash?: string;
+  student_name?: string;
+  studentName?: string;
+}
+
+const extractCertId = (text: string) => {
+  if (!text) return "";
+  // If it's a full URL like http://.../verify/CERT-123, extract the ID
+  if (text.includes("/verify/")) {
+    const parts = text.split("/verify/");
+    return parts[parts.length - 1].split("?")[0]; // Remove query params if any
+  }
+  return text.trim();
+};
+
 export default function Verification() {
   const { certificateId: urlCertificateId } = useParams();
   const [certificateId, setCertificateId] = useState(urlCertificateId || "");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [verificationResult, setVerificationResult] = useState<CertificateVerification | null>(null);
   const { toast } = useToast();
 
   const handleVerify = useCallback(async (id?: string) => {
-    const certId = id || certificateId.trim();
+    const rawId = id || certificateId.trim();
+    const certId = extractCertId(rawId);
     
     if (!certId) {
       toast({
@@ -58,7 +88,7 @@ export default function Verification() {
       console.log("Verification API response:", response); // Debug
 
       if (response.success && response.data) {
-        const cert = response.data;
+        const cert = response.data as CertificateData;
         console.log("Certificate data:", cert); // Debug
         
         // Backend returns status as string: 'valid', 'revoked', 'invalid', or 'not_found'
@@ -142,30 +172,7 @@ export default function Verification() {
   }, [urlCertificateId, certificateId, handleVerify]);
 
   const handleQRScan = () => {
-    // Create a file input for QR code image upload
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      try {
-        // For now, we'll use a simple approach - user can paste the certificate ID
-        // In production, you'd use a QR code scanning library like jsQR or html5-qrcode
-        toast({
-          title: "QR Code Scanner",
-          description: "Please enter the certificate ID manually. Full QR scanning requires camera access.",
-        });
-      } catch (error) {
-        toast({
-          title: "QR Scan failed",
-          description: "Could not read QR code. Please enter certificate ID manually.",
-          variant: "destructive",
-        });
-      }
-    };
-    input.click();
+    setIsScannerOpen(true);
   };
 
   const handlePasteFromClipboard = async () => {
@@ -255,7 +262,7 @@ export default function Verification() {
                     }}
                   />
                 </div>
-                <Button variant="outline" onClick={handleQRScan} title="Scan QR code (manual entry for now)">
+                <Button variant="outline" onClick={handleQRScan} title="Scan QR code using camera">
                   <QrCode className="w-4 h-4 mr-2" />
                   Scan QR
                 </Button>
@@ -463,6 +470,48 @@ export default function Verification() {
           </div>
         </div>
       </div>
+      
+      <QRScanner 
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanSuccess={(decodedText) => {
+          const cleanedId = extractCertId(decodedText);
+          setCertificateId(cleanedId);
+          handleVerify(cleanedId);
+        }}
+      />
+
+      <style>{`
+        #qr-code-reader__dashboard {
+          padding: 10px !important;
+          border-top: 1px solid #e2e8f0 !important;
+        }
+        #qr-code-reader__camera_selection {
+          padding: 8px !important;
+          border-radius: 6px !important;
+          border: 1px solid #e2e8f0 !important;
+          margin-bottom: 10px !important;
+          width: 100% !important;
+        }
+        #qr-code-reader__scan_region {
+           background: transparent !important;
+        }
+        #qr-code-reader img {
+           display: none !important;
+        }
+        #qr-code-reader button {
+           background-color: hsl(var(--primary)) !important;
+           color: hsl(var(--primary-foreground)) !important;
+           padding: 8px 16px !important;
+           border-radius: 8px !important;
+           font-weight: 500 !important;
+           border: none !important;
+           cursor: pointer !important;
+        }
+        #qr-code-reader button:hover {
+           opacity: 0.9 !important;
+        }
+      `}</style>
     </div>
   );
 }

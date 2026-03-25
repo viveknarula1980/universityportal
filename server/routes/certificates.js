@@ -5,7 +5,8 @@ import { authenticateToken, requireRole } from '../middleware/auth.js';
 import db from '../database/db.js';
 import { blockchainService } from '../services/blockchain.js';
 import { generateCertificateId } from '../utils/helpers.js';
-
+import { aiService } from '../services/ai.js';
+import { upload } from '../services/storage.js';
 const router = express.Router();
 
 // Issue certificate
@@ -233,10 +234,22 @@ router.get('/verify/:certificateId', async (req, res) => {
   }
 });
 
-// Get all certificates
-router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
+// Get certificates (all for admin/faculty, own for student)
+router.get('/', authenticateToken, requireRole('admin', 'student', 'faculty'), async (req, res) => {
   try {
-    const certificates = await db.allAsync('SELECT * FROM certificates ORDER BY created_at DESC');
+    let certificates;
+    if (req.user.role === 'admin' || req.user.role === 'faculty') {
+      // Admins and faculty can see all certificates
+      certificates = await db.allAsync('SELECT * FROM certificates ORDER BY created_at DESC');
+    } else {
+      // Students can only see their own certificates
+      // Note: student_id in certificates table points to users.id
+      certificates = await db.allAsync(
+        'SELECT * FROM certificates WHERE student_id = ? ORDER BY created_at DESC',
+        [req.user.id]
+      );
+    }
+    
     res.json({ success: true, data: certificates });
   } catch (error) {
     console.error('Error fetching certificates:', error);
@@ -292,6 +305,174 @@ router.post('/:certificateId/revoke', authenticateToken, requireRole('admin'), a
   } catch (error) {
     console.error('Revocation error:', error);
     res.status(500).json({ success: false, error: 'Failed to revoke certificate' });
+  }
+});
+
+/**
+ * AI Extract degree info from image
+ * POST /api/certificates/extract
+ */
+router.post('/extract', authenticateToken, requireRole('admin'), upload.single('degreeImage'), async (req, res) => {
+  try {
+    let base64Data;
+    let mimeType;
+
+    if (req.file) {
+      // Handle file upload
+      base64Data = req.file.buffer.toString('base64');
+      mimeType = req.file.mimetype;
+    } else if (req.body.image) {
+      // Handle base64 string
+      const matches = req.body.image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        return res.status(400).json({ success: false, error: 'Invalid base64 image data' });
+      }
+      mimeType = matches[1];
+      base64Data = matches[2];
+    } else {
+      return res.status(400).json({ success: false, error: 'No image provided' });
+    }
+
+    console.log(`🤖 AI Extraction requested for ${mimeType} (${(base64Data.length * 0.75 / 1024).toFixed(2)} KB)`);
+    
+    const extractedData = await aiService.extractDegreeInfo(base64Data, mimeType);
+    
+    console.log('✅ AI Extracted Data:', extractedData);
+    
+    res.json({
+      success: true,
+      data: extractedData
+    });
+  } catch (error) {
+    console.error('AI Extraction error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to extract degree information' });
+  }
+});
+
+/**
+ * Bulk issue certificates
+ * POST /api/certificates/bulk-issue
+ */
+router.post('/bulk-issue', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { certificates } = req.body; // Array of certificate data
+
+    if (!Array.isArray(certificates) || certificates.length === 0) {
+      return res.status(400).json({ success: false, error: 'No certificates provided' });
+    }
+
+    console.log(`📝 Bulk issuance request for ${certificates.length} certificates`);
+
+    const results = [];
+    const errors = [];
+
+    for (const cert of certificates) {
+      try {
+        const { studentId, studentName, degreeName, degreeType, issueDate } = cert;
+
+        // Basic validation
+        if (!studentId || !studentName || !degreeName || !degreeType) {
+          throw new Error('Missing required fields for student: ' + (studentName || studentId || 'Unknown'));
+        }
+
+        const certificateId = generateCertificateId();
+        const studentIdHash = createHash('sha256').update(studentId).digest('hex');
+
+        // Create certificate data
+        const certificateData = {
+          certificateId,
+          degreeName: `${degreeType} in ${degreeName}`,
+          universitySignature: process.env.UNIVERSITY_SIGNATURE_KEY || 'university-signature',
+          issueDate: new Date(issueDate).getTime(),
+          revocationStatus: false,
+          studentId: studentIdHash
+        };
+
+        // Submit to blockchain
+        const dataHash = createHash('sha256')
+          .update(JSON.stringify(certificateData))
+          .digest('hex');
+
+        const blockchainResult = await blockchainService.submitRecord(
+          'certificate',
+          certificateId,
+          dataHash
+        );
+
+        // Find user by student ID
+        const user = await db.getAsync('SELECT id FROM users WHERE student_id = ? OR id = ?', [studentId, studentId]);
+        
+        if (!user) {
+          throw new Error(`Student with ID "${studentId}" not found`);
+        }
+
+        const actualStudentId = user.id;
+
+        // Save to database
+        await db.runAsync(`
+          INSERT INTO certificates (
+            id, student_id, student_name, degree_name, degree_type,
+            issue_date, blockchain_hash, university_signature, qr_code_url, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          certificateId,
+          actualStudentId,
+          studentName,
+          certificateData.degreeName,
+          degreeType,
+          certificateData.issueDate,
+          blockchainResult.hash,
+          certificateData.universitySignature,
+          `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify/${certificateId}`,
+          Date.now()
+        ]);
+
+        // Store dataHash in blockchain_records
+        await db.runAsync(`
+          INSERT OR IGNORE INTO blockchain_records (
+            id, record_type, record_id, blockchain_hash, transaction_data, block_number, timestamp, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          'certificate',
+          certificateId,
+          dataHash,
+          JSON.stringify({ 
+            transactionHash: blockchainResult.hash, 
+            certificateData,
+            blockNumber: blockchainResult.blockNumber 
+          }),
+          blockchainResult.blockNumber || null,
+          Date.now(),
+          Date.now()
+        ]);
+
+        results.push({
+          studentId,
+          studentName,
+          certificateId,
+          blockchainHash: blockchainResult.hash
+        });
+      } catch (err) {
+        console.error(`❌ Error issuing certificate for student: ${cert.studentName}`, err.message);
+        errors.push({
+          studentId: cert.studentId,
+          studentName: cert.studentName,
+          error: err.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      issued: results.length,
+      failed: errors.length,
+      data: results,
+      errors: errors
+    });
+  } catch (error) {
+    console.error('Bulk issuance error:', error);
+    res.status(500).json({ success: false, error: 'Bulk issuance failed' });
   }
 });
 

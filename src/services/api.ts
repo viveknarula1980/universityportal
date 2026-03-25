@@ -1,5 +1,4 @@
-// API Service Layer
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:3000/api");
 
 interface ApiResponse<T> {
   success: boolean;
@@ -137,6 +136,42 @@ class ApiService {
     return this.request(`/certificates/verify/${certificateId}`);
   }
 
+  async extractDegreeInfo(image: File | string) {
+    if (typeof image === 'string') {
+      // Base64 string
+      return this.request("/certificates/extract", {
+        method: "POST",
+        body: JSON.stringify({ image }),
+      });
+    } else {
+      // File object
+      const formData = new FormData();
+      formData.append("degreeImage", image);
+      
+      const token = this.getToken();
+      const response = await fetch(`${API_BASE_URL}/certificates/extract`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to extract degree info");
+      }
+      return data;
+    }
+  }
+
+  async bulkIssueCertificates(certificates: any[]) {
+    return this.request("/certificates/bulk-issue", {
+      method: "POST",
+      body: JSON.stringify({ certificates }),
+    });
+  }
+
   // Faculty APIs
   async getFacultySubmissions(filters?: {
     course?: string;
@@ -230,7 +265,30 @@ class ApiService {
     return this.request(`/admin/audit-logs${query ? `?${query}` : ''}`);
   }
 
-  // Blockchain APIs
+  async getAdminUsers() {
+    return this.request("/admin/users");
+  }
+
+  async createAdminUser(userData: {
+    email: string;
+    password: string;
+    name: string;
+    role: "student" | "faculty";
+    studentId?: string;
+    department?: string;
+  }) {
+    return this.request("/admin/users", {
+      method: "POST",
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async bulkCreateAdminUsers(users: any[]) {
+    return this.request("/admin/users/bulk", {
+      method: "POST",
+      body: JSON.stringify({ users }),
+    });
+  }
   async getBlockchainRecords() {
     return this.request("/blockchain/records");
   }
@@ -264,6 +322,45 @@ class ApiService {
 
   async getAIStatus() {
     return this.request("/ai/status");
+  }
+
+  async getAIRecommendations() {
+    return this.request("/ai/recommendations");
+  }
+
+  async analyzeCV(file: File) {
+    const formData = new FormData();
+    formData.append("cv", file);
+    
+    const token = this.getToken();
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    const response = await fetch(`${API_URL}/ai/analyze-cv`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Failed to analyze CV");
+    }
+    return data;
+  }
+
+  async analyzeLinkedIn(url: string) {
+    return this.request("/ai/analyze-linkedin", {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    });
+  }
+
+  async verifyLoginOtp(email: string, code: string) {
+    return this.request("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    });
   }
 }
 

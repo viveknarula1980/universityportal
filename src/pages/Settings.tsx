@@ -5,8 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Settings() {
+  const { user } = useAuth();
+  
+  if (!user) return null;
+
   return (
     <MainLayout>
       <div className="max-w-3xl mx-auto space-y-8">
@@ -30,20 +35,30 @@ export default function Settings() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" defaultValue="Anupam " />
+              <Input id="name" defaultValue={user.name} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" defaultValue="Anupam.@university.edu" />
+              <Input id="email" defaultValue={user.email} disabled />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="student-id">Student ID</Label>
-              <Input id="student-id" defaultValue="CS2024-0892" disabled />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="department">Department</Label>
-              <Input id="department" defaultValue="Computer Science" disabled />
-            </div>
+            {user.role === 'student' && (
+              <div className="space-y-2">
+                <Label htmlFor="student-id">Student ID</Label>
+                <Input id="student-id" defaultValue={user.studentId} disabled />
+              </div>
+            )}
+            {user.role === 'faculty' && (
+              <div className="space-y-2">
+                <Label htmlFor="department">Department</Label>
+                <Input id="department" defaultValue={user.department} disabled />
+              </div>
+            )}
+            {user.role === 'admin' && (
+               <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Input id="role" defaultValue="Portal Administrator" disabled />
+              </div>
+            )}
           </div>
 
           <Button>Save Changes</Button>

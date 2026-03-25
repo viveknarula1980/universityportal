@@ -8,7 +8,8 @@ import {
   Settings,
   User,
   LogOut,
-  ChevronLeft
+  ChevronLeft,
+  Award
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/student" },
   { icon: FileText, label: "Assignments", path: "/assignments" },
   { icon: Sparkles, label: "AI Generator", path: "/ai-generator" },
+  { icon: Award, label: "My Certificates", path: "/my-certificates" },
   { icon: Link2, label: "Blockchain", path: "/blockchain" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];

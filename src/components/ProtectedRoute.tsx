@@ -22,8 +22,8 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!isAuthenticated || (user && !user.isVerified)) {
+    return <Navigate to="/login" state={{ from: location, needsOtp: !user?.isVerified }} replace />;
   }
 
   if (requiredRole && user?.role !== requiredRole) {

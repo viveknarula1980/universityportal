@@ -31,10 +31,8 @@ app.use(cors({
     
     const allowedOrigins = [
       process.env.FRONTEND_URL || 'http://localhost:5173',
-      'http://localhost:8080',
       'http://localhost:5173',
       'http://localhost:3000',
-      'https://ai-assignment-gateway.onrender.com',
       // Add your frontend deployment URL here when deployed
     ];
     
@@ -112,29 +110,27 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-initializeServices().then(() => {
-  app.listen(PORT, () => {
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('🚀 EduChain Backend Server');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log(`📍 Server: http://localhost:${PORT}`);
-    console.log(`📊 Database: ${process.env.DATABASE_PATH || './data/educhain.db'}`);
-    console.log(`🔗 Blockchain: ${blockchainService.initialized ? '✅ Connected' : '⚠️  Mock Mode (configure BLOCKCHAIN_RPC_URL)'}`);
-    console.log(`🤖 AI Service: ${aiService.isConfigured() ? '✅ Ready' : '⚠️  Not Configured (set OPENAI_API_KEY)'}`);
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('\n📖 Setup Guides:');
-    if (!blockchainService.initialized) {
-      console.log('   - Blockchain: See BLOCKCHAIN_SETUP.md');
-    }
-    if (!aiService.isConfigured()) {
-      console.log('   - AI: See AI_SETUP.md');
-    }
-    console.log('   - Complete: See COMPLETE_SETUP.md\n');
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+  initializeServices().then(() => {
+    app.listen(PORT, () => {
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('🚀 EduChain Backend Server');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log(`📍 Server: http://localhost:${PORT}`);
+      console.log(`📊 Database: ${process.env.DATABASE_URL ? 'PostgreSQL' : (process.env.DATABASE_PATH || './data/educhain.db')}`);
+      console.log(`🔗 Blockchain: ${blockchainService.initialized ? '✅ Connected' : '⚠️  Mock Mode (configure BLOCKCHAIN_RPC_URL)'}`);
+      console.log(`🤖 AI Service: ${aiService.isConfigured() ? '✅ Ready' : '⚠️  Not Configured (set OPENAI_API_KEY)'}`);
+      console.log('═══════════════════════════════════════════════════════');
+    });
+  }).catch(error => {
+    console.error('❌ Failed to initialize services:', error);
+    process.exit(1);
   });
-}).catch(error => {
-  console.error('❌ Failed to initialize services:', error);
-  process.exit(1);
-});
+} else {
+  // In serverless environment, services will be initialized on first request
+  // but we can also trigger it manually or let the middleware handle it
+  initializeServices().catch(console.error);
+}
 
 export default app;
 

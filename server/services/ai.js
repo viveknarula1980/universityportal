@@ -714,6 +714,100 @@ class AIService {
     // Check if either OpenAI or Gemini is configured
     return this.initialized && (this.client !== null || (this.provider === 'gemini' && this.geminiApiKey));
   }
+
+  /**
+   * Extract degree information from an image or PDF using AI
+   * @param {string} base64Data - Base64 encoded image or PDF data
+   * @param {string} mimeType - MIME type of the file
+   * @returns {Promise<Object>} - Extracted degree information
+   */
+  async extractDegreeInfo(base64Data, mimeType = 'image/jpeg') {
+    if (!this.initialized) {
+      throw new Error('AI Service not configured');
+    }
+
+    const systemPrompt = `You are an expert at extracting information from university degree certificates and academic documents.
+Extract the following fields from the provided document:
+- studentName: Full name of the student
+- studentId: Student ID or enrollment number (if found)
+- degreeName: Name of the degree (e.g., Computer Science, Business Administration)
+- degreeType: Type of degree (e.g., Bachelor of Science, Master of Arts, PhD)
+- issueDate: Date of issuance in ISO format (YYYY-MM-DD), or as close as possible
+
+Return ONLY a clean JSON object. If a field is not found, return an empty string for that field.
+Format: { "studentName": "...", "studentId": "...", "degreeName": "...", "degreeType": "...", "issueDate": "..." }`;
+
+    const userPrompt = "Please extract the degree information from this document.";
+
+    try {
+      if (this.provider === 'openai' && this.client) {
+        // OpenAI Vision API (if model supports it)
+        const response = await this.client.chat.completions.create({
+          model: this.model.includes('gpt-4-vision') || this.model.includes('gpt-4o') || this.model.includes('gpt-5') ? this.model : 'gpt-4o',
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: userPrompt },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:${mimeType};base64,${base64Data}`,
+                  },
+                },
+              ],
+            },
+          ],
+          response_format: { type: "json_object" },
+          max_completion_tokens: 1000,
+        });
+
+        const content = response.choices[0].message.content;
+        return JSON.parse(content);
+      } else if (this.provider === 'gemini' && this.geminiApiKey) {
+        // Gemini Vision API
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${this.geminiApiKey}`;
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: `${systemPrompt}\n\n${userPrompt}` },
+                {
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: base64Data
+                  }
+                }
+              ]
+            }],
+            generationConfig: {
+              response_mime_type: "application/json",
+              maxOutputTokens: 1000,
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'Gemini extraction failed');
+        }
+
+        const data = await response.json();
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        return JSON.parse(content);
+      }
+    } catch (error) {
+      console.error('OCR Extraction error:', error);
+      throw new Error(`Failed to extract degree info: ${error.message}`);
+    }
+  }
 }
 
 export const aiService = new AIService();

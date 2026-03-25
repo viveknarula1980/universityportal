@@ -1,7 +1,8 @@
-import { FileText, CheckCircle2, Clock, Sparkles } from "lucide-react";
+import { FileText, CheckCircle2, Clock, Sparkles, ExternalLink } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { AIUsageMeter } from "@/components/dashboard/AIUsageMeter";
+import { CareerAgent } from "@/components/dashboard/CareerAgent";
 import { AssignmentCard } from "@/components/dashboard/AssignmentCard";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +36,11 @@ interface ActivityItem {
   type: string;
 }
 
+interface AIRecommendations {
+  internships: { title: string; company: string; description: string; matchReason: string; link?: string }[];
+  courses: { title: string; platform: string; description: string; matchReason: string; link?: string }[];
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -47,7 +53,9 @@ const Index = () => {
   const [assignments, setAssignments] = useState<RecentAssignment[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [aiUsage, setAiUsage] = useState({ used: 0, total: 25000, daysUntilReset: 0 });
+  const [recommendations, setRecommendations] = useState<AIRecommendations | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingRecs, setLoadingRecs] = useState(true);
 
   useEffect(() => {
     // Fetch all dashboard data
@@ -58,29 +66,44 @@ const Index = () => {
         // Fetch dashboard stats and assignments
         const dashboardResponse = await apiService.getDashboardData();
         if (dashboardResponse.success && dashboardResponse.data) {
-          setStats(dashboardResponse.data.stats || {
+          const dData: any = dashboardResponse.data;
+          setStats(dData.stats || {
             total: 0,
             completed: 0,
             pending: 0,
             aiAssisted: 0,
           });
-          setAssignments(dashboardResponse.data.recentAssignments || []);
-          setRecentActivity(dashboardResponse.data.recentActivity || []);
+          setAssignments(dData.recentAssignments || []);
+          setRecentActivity(dData.recentActivity || []);
         }
 
         // Fetch AI usage
         const aiUsageResponse = await apiService.getAIUsage();
         if (aiUsageResponse.success && aiUsageResponse.data) {
+          const aData: any = aiUsageResponse.data;
           setAiUsage({
-            used: aiUsageResponse.data.used || 0,
-            total: aiUsageResponse.data.limit || 25000,
-            daysUntilReset: aiUsageResponse.data.daysUntilReset || 0,
+            used: aData.used || 0,
+            total: aData.limit || 25000,
+            daysUntilReset: aData.daysUntilReset || 0,
           });
         }
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
         setLoading(false);
+      }
+
+      // Fetch AI Career Recommendations
+      try {
+        setLoadingRecs(true);
+        const recResponse = await apiService.getAIRecommendations();
+        if (recResponse.success && recResponse.data) {
+          setRecommendations(recResponse.data as AIRecommendations);
+        }
+      } catch (error) {
+        console.error("Failed to fetch AI recommendations:", error);
+      } finally {
+        setLoadingRecs(false);
       }
     };
     
@@ -179,6 +202,88 @@ const Index = () => {
             </div>
           )}
         </div>
+
+        {/* AI Career Suggestions */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-display font-semibold">AI Career Suggestions</h2>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Personalized internships and courses recommended based on your university degrees and assignments.
+          </p>
+
+          {loadingRecs ? (
+            <div className="text-center py-8 text-muted-foreground animate-pulse">Analyzing your academic profile...</div>
+          ) : !recommendations ? (
+            <div className="text-center py-8 text-muted-foreground">Unable to generate recommendations at this time.</div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Internships Section */}
+              <div className="bg-card p-6 space-y-4 rounded-xl border shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">💼</span>
+                  Recommended Internships
+                </h3>
+                <div className="space-y-4 relative z-10">
+                  {recommendations.internships.map((internship, i) => (
+                    <div key={i} className="p-4 rounded-lg bg-background border hover:border-primary/40 transition-all shadow-sm">
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <h4 className="font-medium text-foreground">{internship.title}</h4>
+                          <p className="text-sm font-medium text-primary mb-2">{internship.company}</p>
+                        </div>
+                        {internship.link && internship.link !== '#' && (
+                          <a href={internship.link.startsWith('http') ? internship.link : `https://${internship.link}`} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 font-semibold cursor-pointer">
+                            Apply <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">{internship.description}</p>
+                      <div className="text-xs bg-muted/50 text-muted-foreground px-2.5 py-1.5 rounded-md inline-block">
+                        <strong className="text-foreground">Why:</strong> {internship.matchReason}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Courses Section */}
+              <div className="bg-card p-6 space-y-4 rounded-xl border shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">📚</span>
+                  Recommended Courses
+                </h3>
+                <div className="space-y-4 relative z-10">
+                  {recommendations.courses.map((course, i) => (
+                    <div key={i} className="p-4 rounded-lg bg-background border hover:border-blue-500/40 transition-all shadow-sm">
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <h4 className="font-medium text-foreground">{course.title}</h4>
+                          <p className="text-sm font-medium text-blue-500 mb-2">{course.platform}</p>
+                        </div>
+                        {course.link && course.link !== '#' && (
+                          <a href={course.link.startsWith('http') ? course.link : `https://${course.link}`} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 font-semibold cursor-pointer">
+                            View <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">{course.description}</p>
+                      <div className="text-xs bg-muted/50 text-muted-foreground px-2.5 py-1.5 rounded-md inline-block">
+                        <strong className="text-foreground">Why:</strong> {course.matchReason}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* AI Career Agent (CV / LinkedIn) */}
+        <CareerAgent />
       </div>
     </MainLayout>
   );

@@ -45,9 +45,11 @@ export function MainLayout({ children, role }: MainLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {renderSidebar()}
-      <main className="ml-20 lg:ml-64 transition-all duration-300">
-        <div className="p-6 lg:p-8">
+      <div className="no-print">
+        {renderSidebar()}
+      </div>
+      <main className="ml-20 lg:ml-64 transition-all duration-300 print:m-0 print:p-0">
+        <div className="p-6 lg:p-8 print:p-0">
           {children}
         </div>
       </main>

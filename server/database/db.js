@@ -1,4 +1,6 @@
 import sqlite3 from 'sqlite3';
+import pkg from 'pg';
+const { Pool } = pkg;
 import { readFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -8,114 +10,193 @@ import bcrypt from 'bcryptjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const IS_POSTGRES = !!process.env.DATABASE_URL;
 const DB_PATH = process.env.DATABASE_PATH || join(__dirname, '../data/educhain.db');
 
-// Ensure data directory exists
-const dataDir = dirname(DB_PATH);
-if (!existsSync(dataDir)) {
-  mkdirSync(dataDir, { recursive: true });
+let db;
+let pool;
+
+if (IS_POSTGRES) {
+  console.log('✅ Database: Using PostgreSQL');
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false // Required for many cloud Postgres providers like Neon/Supabase
+    }
+  });
+  
+  // Create a compatibility layer for sqlite-style methods
+  db = {
+    run: async (sql, params = []) => {
+      const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+      return result;
+    },
+    get: async (sql, params = []) => {
+      const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+      return result.rows[0];
+    },
+    all: async (sql, params = []) => {
+      const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+      return result.rows;
+    },
+    exec: async (sql) => {
+      return await pool.query(sql);
+    },
+    prepare: (sql) => {
+      return {
+        run: async (params) => {
+          return await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+        },
+        finalize: () => {}
+      };
+    }
+  };
+} else {
+  console.log('✅ Database: Using SQLite');
+  // Ensure data directory exists
+  const dataDir = dirname(DB_PATH);
+  if (!existsSync(dataDir)) {
+    mkdirSync(dataDir, { recursive: true });
+  }
+
+  const sqliteDb = new sqlite3.Database(DB_PATH, (err) => {
+    if (err) {
+      console.error('❌ Database connection error:', err);
+    } else {
+      console.log('✅ Database connected:', DB_PATH);
+    }
+  });
+
+  sqliteDb.run('PRAGMA foreign_keys = ON');
+
+  // Promisify database methods for compatibility
+  db = {
+    run: promisify(sqliteDb.run.bind(sqliteDb)),
+    get: promisify(sqliteDb.get.bind(sqliteDb)),
+    all: promisify(sqliteDb.all.bind(sqliteDb)),
+    exec: promisify(sqliteDb.exec.bind(sqliteDb)),
+    prepare: sqliteDb.prepare.bind(sqliteDb)
+  };
 }
 
-// Create database connection
-const db = new sqlite3.Database(DB_PATH, (err) => {
-  if (err) {
-    console.error('❌ Database connection error:', err);
-  } else {
-    console.log('✅ Database connected:', DB_PATH);
-  }
-});
-
-// Enable foreign keys
-db.run('PRAGMA foreign_keys = ON');
-
-// Promisify database methods
-db.runAsync = promisify(db.run.bind(db));
-db.getAsync = promisify(db.get.bind(db));
-db.allAsync = promisify(db.all.bind(db));
-db.execAsync = promisify(db.exec.bind(db));
+// Global async methods
+db.runAsync = db.run;
+db.getAsync = db.get;
+db.allAsync = db.all;
+db.execAsync = db.exec;
 
 // Initialize database schema
 export async function initDatabase() {
   try {
     const schemaPath = join(__dirname, 'schema.sql');
-    const schema = readFileSync(schemaPath, 'utf-8');
+    let schema = readFileSync(schemaPath, 'utf-8');
     
-    // Execute schema
+    // Adapt schema for Postgres if necessary
+    if (IS_POSTGRES) {
+      // Basic adaptations
+      schema = schema.replace(/INTEGER PRIMARY KEY AUTOINCREMENT/g, 'SERIAL PRIMARY KEY');
+      schema = schema.replace(/DATETIME DEFAULT CURRENT_TIMESTAMP/g, 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+      schema = schema.replace(/BOOLEAN DEFAULT 0/g, 'BOOLEAN DEFAULT FALSE');
+      schema = schema.replace(/BOOLEAN DEFAULT 1/g, 'BOOLEAN DEFAULT TRUE');
+      // Postgres doesn't need PRAGMA
+      schema = schema.split('\n').filter(line => !line.includes('PRAGMA')).join('\n');
+    }
+
+    // Execute schema (creates tables if they don't exist)
+    // For Postgres, we might need to split by semicolon to execute one by one if it's large,
+    // but pool.query usually handles multi-statement if configured or if using a single string.
     await db.execAsync(schema);
     console.log('✅ Database schema initialized');
 
-    // Create default admin user if doesn't exist
-    const adminExists = await db.getAsync('SELECT id FROM users WHERE email = ?', ['admin@university.edu']);
-    if (!adminExists) {
-      const passwordHash = await bcrypt.hash('admin123', 10);
-      const userId = `user-${Date.now()}`;
-      
-      await db.runAsync(`
-        INSERT INTO users (id, email, password_hash, name, role, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [
-        userId,
-        'admin@university.edu',
-        passwordHash,
-        'Admin User',
-        'admin',
-        Date.now(),
-        Date.now()
-      ]);
-      console.log('✅ Default admin user created');
+    // MIGRATION check (different for Postgres)
+    if (!IS_POSTGRES) {
+      try {
+        const tableInfo = await db.allAsync("PRAGMA table_info(users)");
+        const hasGoogleId = tableInfo.some(col => col.name === 'google_id');
+        const hasIsVerified = tableInfo.some(col => col.name === 'is_verified');
+
+        if (!hasGoogleId) {
+          console.log('🔄 Adding google_id column to users table...');
+          await db.runAsync("ALTER TABLE users ADD COLUMN google_id TEXT");
+        }
+        
+        if (!hasIsVerified) {
+          console.log('🔄 Adding is_verified column to users table...');
+          await db.runAsync("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT 0");
+          await db.runAsync("UPDATE users SET is_verified = 1");
+        }
+      } catch (migrationError) {
+        console.warn('⚠️ Migration check failed:', migrationError.message);
+      }
+    } else {
+        // Postgres migration logic could go here, but usually handled by schema.sql with IF NOT EXISTS
     }
 
-    // Create default student user
-    const studentExists = await db.getAsync('SELECT id FROM users WHERE email = ?', ['student@university.edu']);
-    if (!studentExists) {
-      const passwordHash = await bcrypt.hash('student123', 10);
-      const userId = `user-${Date.now()}-student`;
-      
-      await db.runAsync(`
-        INSERT INTO users (id, email, password_hash, name, role, student_id, department, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        userId,
-        'student@university.edu',
-        passwordHash,
-        'Anupam',
-        'student',
-        'CS2024-0892',
-        'Computer Science',
-        Date.now(),
-        Date.now()
-      ]);
-      console.log('✅ Default student user created');
-    }
+    // Create default users if they don't exist
+    const defaultUsers = [
+      {
+        email: 'admin@university.edu',
+        password: 'admin123',
+        name: 'Admin User',
+        role: 'admin',
+        student_id: null,
+        department: null
+      },
+      {
+        email: 'beraa634@gmail.com',
+        password: 'beraa634',
+        name: 'Anupam Admin',
+        role: 'admin',
+        student_id: null,
+        department: null
+      },
+      {
+        email: 'student@university.edu',
+        password: 'student123',
+        name: 'Anupam',
+        role: 'student',
+        student_id: 'CS2024-0892',
+        department: 'Computer Science'
+      },
+      {
+        email: 'faculty@university.edu',
+        password: 'faculty123',
+        name: 'Dr. Smith',
+        role: 'faculty',
+        student_id: null,
+        department: 'Computer Science'
+      }
+    ];
 
-    // Create default faculty user
-    const facultyExists = await db.getAsync('SELECT id FROM users WHERE email = ?', ['faculty@university.edu']);
-    if (!facultyExists) {
-      const passwordHash = await bcrypt.hash('faculty123', 10);
-      const userId = `user-${Date.now()}-faculty`;
-      
-      await db.runAsync(`
-        INSERT INTO users (id, email, password_hash, name, role, department, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        userId,
-        'faculty@university.edu',
-        passwordHash,
-        'Dr. Smith',
-        'faculty',
-        'Computer Science',
-        Date.now(),
-        Date.now()
-      ]);
-      console.log('✅ Default faculty user created');
+    for (const user of defaultUsers) {
+      const exists = await db.getAsync('SELECT id FROM users WHERE email = ?', [user.email]);
+      if (!exists) {
+        const passwordHash = await bcrypt.hash(user.password, 10);
+        const userId = `user-${Date.now()}-${user.role}`;
+        const now = Date.now();
+        
+        await db.runAsync(`
+          INSERT INTO users (id, email, password_hash, name, role, student_id, department, is_verified, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          userId,
+          user.email,
+          passwordHash,
+          user.name,
+          user.role,
+          user.student_id,
+          user.department,
+          IS_POSTGRES ? true : 1,
+          now,
+          now
+        ]);
+        console.log(`✅ Default ${user.role} user created: ${user.email}`);
+      }
     }
 
     console.log('✅ Database initialization complete\n');
   } catch (error) {
-    // Ignore "already exists" errors
-    if (!error.message.includes('already exists') && !error.message.includes('duplicate')) {
-      console.error('❌ Database initialization error:', error.message);
-    }
+    console.error('❌ Database initialization error:', error.message);
   }
 }
 

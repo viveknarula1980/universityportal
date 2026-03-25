@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Settings,
   GraduationCap,
@@ -21,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/api";
+import { UserManagement } from "@/components/admin/UserManagement";
 
 interface Certificate {
   id: string;
@@ -81,6 +83,8 @@ export default function AdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [updatingLimits, setUpdatingLimits] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const defaultTab = searchParams.get("tab") || "certificates";
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -276,10 +280,15 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <Tabs defaultValue="certificates" className="space-y-6">
+        <Tabs 
+          value={searchParams.get("tab") || "certificates"} 
+          onValueChange={(value) => setSearchParams({ tab: value })}
+          className="space-y-6"
+        >
           <TabsList>
             <TabsTrigger value="certificates">Certificates</TabsTrigger>
             <TabsTrigger value="ai-limits">AI Limits</TabsTrigger>
+            <TabsTrigger value="users">Manage Users</TabsTrigger>
             <TabsTrigger value="audit">Audit Log</TabsTrigger>
           </TabsList>
 
@@ -553,6 +562,11 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          {/* User Management Tab */}
+          <TabsContent value="users" className="space-y-6">
+            <UserManagement />
           </TabsContent>
         </Tabs>
       </div>
