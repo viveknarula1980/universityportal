@@ -182,10 +182,13 @@ router.post('/login', [
         await transporter.sendMail(mailOptions);
     } catch (mailError) {
         console.error('Failed to send login OTP:', mailError);
-        // If SMTP fails, we can either throw an error or log it and allow dev mode to continue
-        if (process.env.NODE_ENV === 'production') {
-            return res.status(500).json({ success: false, error: 'Failed to send verification code' });
-        }
+        // Include the actual error message for debugging
+        return res.status(500).json({ 
+            success: false, 
+            error: 'Failed to send verification code', 
+            details: mailError.message,
+            tip: 'Check your SMTP_USER and SMTP_PASS environment variables.'
+        });
     }
 
     res.json({
@@ -197,7 +200,12 @@ router.post('/login', [
 
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ success: false, error: 'Login failed' });
+    res.status(500).json({ 
+        success: false, 
+        error: 'Login failed', 
+        details: error.message,
+        tip: 'Check your DATABASE_URL environment variable.'
+    });
   }
 });
 
