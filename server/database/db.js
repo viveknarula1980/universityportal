@@ -17,7 +17,7 @@ let db;
 let pool;
 
 if (IS_POSTGRES) {
-  console.log('✅ Database: Using PostgreSQL');
+  console.log('✅ Database: Using PostgreSQL (v2)');
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
