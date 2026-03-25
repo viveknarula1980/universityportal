@@ -190,6 +190,7 @@ export async function initDatabase() {
       if (!exists) {
         const passwordHash = await bcrypt.hash(user.password, 10);
         const userId = `user-${Date.now()}-${user.role}`;
+        const now = Date.now();
         console.log(`🏗️ Creating missing default user: ${user.email}`);
         
         await db.runAsync(`
