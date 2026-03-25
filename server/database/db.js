@@ -26,17 +26,22 @@ if (IS_POSTGRES) {
   });
   
   // Create a compatibility layer for sqlite-style methods
+  const replacePlaceholders = (sql) => {
+    let count = 0;
+    return sql.replace(/\?/g, () => `$${++count}`);
+  };
+
   db = {
     run: async (sql, params = []) => {
-      const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+      const result = await pool.query(replacePlaceholders(sql), params);
       return result;
     },
     get: async (sql, params = []) => {
-      const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+      const result = await pool.query(replacePlaceholders(sql), params);
       return result.rows[0];
     },
     all: async (sql, params = []) => {
-      const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+      const result = await pool.query(replacePlaceholders(sql), params);
       return result.rows;
     },
     exec: async (sql) => {
@@ -45,7 +50,7 @@ if (IS_POSTGRES) {
     prepare: (sql) => {
       return {
         run: async (params) => {
-          return await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+          return await pool.query(replacePlaceholders(sql), params);
         },
         finalize: () => {}
       };
