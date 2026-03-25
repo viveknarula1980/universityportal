@@ -100,6 +100,8 @@ export async function initDatabase() {
     if (IS_POSTGRES) {
       // Basic adaptations
       schema = schema.replace(/INTEGER PRIMARY KEY AUTOINCREMENT/g, 'SERIAL PRIMARY KEY');
+      // Convert INTEGER to BIGINT to prevent overflow with ms timestamps
+      schema = schema.replace(/\bINTEGER\b/g, 'BIGINT');
       schema = schema.replace(/DATETIME DEFAULT CURRENT_TIMESTAMP/g, 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
       schema = schema.replace(/BOOLEAN DEFAULT 0/g, 'BOOLEAN DEFAULT FALSE');
       schema = schema.replace(/BOOLEAN DEFAULT 1/g, 'BOOLEAN DEFAULT TRUE');
@@ -108,9 +110,19 @@ export async function initDatabase() {
     }
 
     // Execute schema (creates tables if they don't exist)
-    // For Postgres, we might need to split by semicolon to execute one by one if it's large,
-    // but pool.query usually handles multi-statement if configured or if using a single string.
-    await db.execAsync(schema);
+    if (IS_POSTGRES) {
+      // Split schema into individual statements for better reliability in Postgres
+      const statements = schema
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+      
+      for (const statement of statements) {
+        await db.execAsync(statement);
+      }
+    } else {
+      await db.execAsync(schema);
+    }
     console.log('✅ Database schema initialized');
 
     // MIGRATION check (different for Postgres)
@@ -178,7 +190,7 @@ export async function initDatabase() {
       if (!exists) {
         const passwordHash = await bcrypt.hash(user.password, 10);
         const userId = `user-${Date.now()}-${user.role}`;
-        const now = Date.now();
+        console.log(`🏗️ Creating missing default user: ${user.email}`);
         
         await db.runAsync(`
           INSERT INTO users (id, email, password_hash, name, role, student_id, department, is_verified, created_at, updated_at)
