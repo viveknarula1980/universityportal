@@ -146,7 +146,26 @@ export async function initDatabase() {
         console.warn('⚠️ Migration check failed:', migrationError.message);
       }
     } else {
-        // Postgres migration logic could go here, but usually handled by schema.sql with IF NOT EXISTS
+        // Postgres migration: Ensure all INTEGER columns are BIGINT to prevent overflow
+        try {
+          console.log('🔄 Checking for INTEGER to BIGINT migrations (PostgreSQL)...');
+          const tables = ['users', 'otp_codes', 'assignments', 'submissions', 'certificates', 'ai_usage', 'ai_limits', 'audit_logs', 'blockchain_records'];
+          for (const table of tables) {
+            // Get columns for the table
+            const colsResult = await pool.query(`
+              SELECT column_name, data_type 
+              FROM information_schema.columns 
+              WHERE table_name = $1 AND data_type = 'integer'
+            `, [table]);
+            
+            for (const col of colsResult.rows) {
+              console.log(`⬆️ Upgrading column ${table}.${col.column_name} to BIGINT...`);
+              await db.execAsync(`ALTER TABLE ${table} ALTER COLUMN ${col.column_name} TYPE BIGINT`);
+            }
+          }
+        } catch (migrationError) {
+          console.warn('⚠️ Postgres migration check failed:', migrationError.message);
+        }
     }
 
     // Create default users if they don't exist
