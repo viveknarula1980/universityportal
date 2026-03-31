@@ -108,9 +108,10 @@ router.post('/issue', authenticateToken, requireRole('admin'), async (req, res) 
     // Store dataHash in blockchain_records for verification
     // The contract stores records by dataHash, not transaction hash
     await db.runAsync(`
-      INSERT OR IGNORE INTO blockchain_records (
+      INSERT INTO blockchain_records (
         id, record_type, record_id, blockchain_hash, transaction_data, block_number, timestamp, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT DO NOTHING
     `, [
       `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       'certificate',
@@ -429,9 +430,10 @@ router.post('/bulk-issue', authenticateToken, requireRole('admin'), async (req, 
 
         // Store dataHash in blockchain_records
         await db.runAsync(`
-          INSERT OR IGNORE INTO blockchain_records (
+          INSERT INTO blockchain_records (
             id, record_type, record_id, blockchain_hash, transaction_data, block_number, timestamp, created_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT DO NOTHING
         `, [
           `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           'certificate',
