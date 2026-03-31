@@ -17,28 +17,28 @@ class AIService {
     this.geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash'; // Default to gemini-2.5-flash (latest fast model)
     this.geminiApiKey = process.env.GEMINI_API_KEY;
     
-    // Try OpenAI first
-    if (process.env.OPENAI_API_KEY) {
+    // Try Gemini First (Preferred AI Provider)
+    if (this.geminiApiKey) {
+      this.initialized = true;
+      this.provider = 'gemini';
+      console.log('✅ Gemini service initialized (primary)');
+      console.log(`🤖 Using model: ${this.geminiModel}`);
+    }
+    
+    // Fallback to OpenAI if Gemini not available
+    if (!this.initialized && process.env.OPENAI_API_KEY) {
       try {
         this.client = new OpenAI({
           apiKey: process.env.OPENAI_API_KEY,
         });
         this.initialized = true;
         this.provider = 'openai';
-        console.log('✅ OpenAI service initialized');
+        console.log('✅ OpenAI service initialized (fallback)');
         console.log(`🤖 Using model: ${this.model}`);
       } catch (error) {
         console.error('Failed to initialize OpenAI:', error.message);
         this.initialized = false;
       }
-    }
-    
-    // Fallback to Gemini if OpenAI not available
-    if (!this.initialized && this.geminiApiKey) {
-      this.initialized = true;
-      this.provider = 'gemini';
-      console.log('✅ Gemini service initialized (fallback)');
-      console.log(`🤖 Using model: ${this.geminiModel}`);
     }
     
     if (!this.initialized) {
