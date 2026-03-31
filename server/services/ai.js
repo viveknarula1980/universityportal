@@ -393,11 +393,16 @@ class AIService {
   }
 
   async generateWithGemini(prompt, options = {}) {
-    const {
+    let {
       maxTokens = 8000,
       temperature = 0.7,
       systemPrompt = "You are a helpful academic assistant. Provide clear, well-structured responses for student assignments."
     } = options;
+
+    // Gemini models typically have an 8192 max output token limit
+    if (maxTokens > 8192) {
+      maxTokens = 8192;
+    }
 
     try {
       console.log(`🤖 Generating AI content with Gemini ${this.geminiModel}...`);
@@ -452,8 +457,7 @@ class AIService {
       const modelVariants = [...new Set([...availableModels, this.geminiModel].filter(m => m))];
       
       let response;
-      let lastError;
-      let lastErrorDetails = null;
+      let allErrors = [];
       let workingModel = null;
       let workingApiVersion = null;
       
@@ -492,27 +496,19 @@ class AIService {
             } else {
               // Get error details for debugging
               const errorData = await testResponse.json().catch(() => ({}));
-              lastError = new Error(errorData.error?.message || `HTTP ${testResponse.status}: ${testResponse.statusText}`);
-              lastErrorDetails = {
-                model,
-                apiVersion,
-                status: testResponse.status,
-                error: errorData.error
-              };
+              const errMsg = errorData.error?.message || `HTTP ${testResponse.status}: ${testResponse.statusText}`;
+              allErrors.push({ model, apiVersion, status: testResponse.status, error: errMsg });
               
               if (testResponse.status === 404) {
-                // Model not found, try next
-                console.log(`   ❌ Model ${model} not found (404)`);
+                console.log(`   ❌ Model ${model} not found (404) in ${apiVersion}`);
                 continue;
               } else {
-                // Other error - log but continue trying
-                console.log(`   ❌ Error with ${model}: ${lastError.message}`);
+                console.log(`   ❌ Error with ${model} (${apiVersion}): ${errMsg}`);
                 continue;
               }
             }
           } catch (error) {
-            lastError = error;
-            lastErrorDetails = { model, apiVersion, error: error.message };
+            allErrors.push({ model, apiVersion, status: 'EXCEPTION', error: error.message });
             console.log(`   ❌ Exception with ${model}: ${error.message}`);
             continue;
           }
@@ -521,13 +517,11 @@ class AIService {
       }
       
       if (!response) {
-        const errorMsg = `No valid Gemini model found. `;
+        const errorMsg = `No valid Gemini model found.\n`;
         const triedMsg = availableModels.length > 0 
-          ? `Available models from API: ${availableModels.join(', ')}. Tried: ${modelVariants.join(', ')}. `
-          : `Tried: ${modelVariants.join(', ')}. `;
-        const detailsMsg = lastErrorDetails 
-          ? `Last attempt: ${lastErrorDetails.model} (${lastErrorDetails.apiVersion}) - ${lastError?.message || 'Unknown error'}`
-          : `Last error: ${lastError?.message || 'Unknown'}`;
+          ? `Models from API: ${availableModels.join(', ')}.\n`
+          : `Fallback Models: ${modelVariants.join(', ')}.\n`;
+        const detailsMsg = `Detailed Failures:\n` + allErrors.map(e => `- ${e.model} (${e.apiVersion}): ${e.status} ${e.error}`).join('\n');
         throw new Error(errorMsg + triedMsg + detailsMsg);
       }
       
