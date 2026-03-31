@@ -145,6 +145,8 @@ router.post('/login', [
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
+    /*
+    // TEMPORARILY DISABLED OTP FOR DIRECT LOGIN
     // Verification check - trigger OTP instead of issuing token immediately
     const otp = generateOTP();
     const otpExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
@@ -183,9 +185,10 @@ router.post('/login', [
         console.error('Resend email failed:', mailError.message);
       }
     }
+    */
 
-    // Fallback: Skip OTP and issue token directly
-    console.log('⚠️ Email service unavailable, issuing token directly');
+    // Direct Login (OTP disabled)
+    // console.log('⚠️ Email service unavailable, issuing token directly');
     const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
         process.env.JWT_SECRET || 'your-secret-key',
