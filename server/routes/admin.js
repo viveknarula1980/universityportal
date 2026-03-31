@@ -18,7 +18,7 @@ router.get('/ai-limits', authenticateToken, requireRole('admin'), async (req, re
       FROM ai_limits al
       JOIN users u ON al.user_id = u.id
       LEFT JOIN ai_usage au ON al.user_id = au.user_id AND al.semester = au.semester
-      GROUP BY al.id
+      GROUP BY al.id, u.student_id, u.name, u.email
       ORDER BY al.updated_at DESC
     `);
 
