@@ -41,11 +41,15 @@ router.post('/issue', authenticateToken, requireRole('admin'), async (req, res) 
     const studentIdHash = createHash('sha256').update(studentId).digest('hex');
 
     // Create certificate data
+    // Parse issue date safely - fallback to current time if invalid
+    const parsedIssueDate = issueDate ? new Date(issueDate).getTime() : Date.now();
+    const safeIssueDate = isNaN(parsedIssueDate) ? Date.now() : parsedIssueDate;
+
     const certificateData = {
       certificateId,
       degreeName: `${degreeType} in ${degreeName}`,
       universitySignature: process.env.UNIVERSITY_SIGNATURE_KEY || 'university-signature',
-      issueDate: new Date(issueDate).getTime(),
+      issueDate: safeIssueDate,
       revocationStatus: false,
       studentId: studentIdHash
     };
@@ -90,8 +94,8 @@ router.post('/issue', authenticateToken, requireRole('admin'), async (req, res) 
     await db.runAsync(`
       INSERT INTO certificates (
         id, student_id, student_name, degree_name, degree_type,
-        issue_date, blockchain_hash, university_signature, qr_code_url, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        issue_date, blockchain_hash, university_signature, qr_code_url, revocation_status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       certificateId,
       actualStudentId,
@@ -102,6 +106,7 @@ router.post('/issue', authenticateToken, requireRole('admin'), async (req, res) 
       blockchainResult.hash,
       certificateData.universitySignature,
       verificationUrl,
+      0,
       Date.now()
     ]);
 
@@ -380,11 +385,15 @@ router.post('/bulk-issue', authenticateToken, requireRole('admin'), async (req, 
         const studentIdHash = createHash('sha256').update(studentId).digest('hex');
 
         // Create certificate data
+        // Parse issue date safely - fallback to current time if invalid
+        const parsedIssueDate = issueDate ? new Date(issueDate).getTime() : Date.now();
+        const safeIssueDate = isNaN(parsedIssueDate) ? Date.now() : parsedIssueDate;
+
         const certificateData = {
           certificateId,
           degreeName: `${degreeType} in ${degreeName}`,
           universitySignature: process.env.UNIVERSITY_SIGNATURE_KEY || 'university-signature',
-          issueDate: new Date(issueDate).getTime(),
+          issueDate: safeIssueDate,
           revocationStatus: false,
           studentId: studentIdHash
         };
@@ -413,8 +422,8 @@ router.post('/bulk-issue', authenticateToken, requireRole('admin'), async (req, 
         await db.runAsync(`
           INSERT INTO certificates (
             id, student_id, student_name, degree_name, degree_type,
-            issue_date, blockchain_hash, university_signature, qr_code_url, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            issue_date, blockchain_hash, university_signature, qr_code_url, revocation_status, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           certificateId,
           actualStudentId,
@@ -425,6 +434,7 @@ router.post('/bulk-issue', authenticateToken, requireRole('admin'), async (req, 
           blockchainResult.hash,
           certificateData.universitySignature,
           `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify/${certificateId}`,
+          0,
           Date.now()
         ]);
 

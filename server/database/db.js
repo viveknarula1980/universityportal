@@ -166,6 +166,16 @@ export async function initDatabase() {
         } catch (migrationError) {
           console.warn('⚠️ Postgres migration check failed:', migrationError.message);
         }
+
+        // Fix NULL revocation_status in certificates (should always be 0 or 1)
+        try {
+          const fixResult = await pool.query('UPDATE certificates SET revocation_status = 0 WHERE revocation_status IS NULL');
+          if (fixResult.rowCount > 0) {
+            console.log(`🔧 Fixed ${fixResult.rowCount} certificates with NULL revocation_status`);
+          }
+        } catch (fixErr) {
+          console.warn('⚠️ Could not fix NULL revocation_status:', fixErr.message);
+        }
     }
 
     // Create default users if they don't exist

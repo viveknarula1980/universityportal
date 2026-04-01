@@ -184,7 +184,9 @@ export default function Blockchain() {
   };
 
   const formatDate = (timestamp: number) => {
+    if (!timestamp || isNaN(timestamp)) return "N/A";
     const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return "N/A";
     return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -214,7 +216,7 @@ export default function Blockchain() {
     return aiType && aiType !== "none";
   }).length;
   const activeCertificates = isAdmin 
-    ? certificates.filter(c => c.revocation_status === 0).length 
+    ? certificates.filter(c => !c.revocation_status || c.revocation_status === 0).length 
     : 0;
   const lastVerification = isAdmin 
     ? (certificates.length > 0 
@@ -348,7 +350,7 @@ export default function Blockchain() {
                             <h3 className="font-display font-semibold">
                               {cert.degree_type} in {cert.degree_name}
                             </h3>
-                            {cert.revocation_status === 0 && (
+                            {(!cert.revocation_status || cert.revocation_status === 0) && (
                               <Badge className="bg-success/10 text-success border-0">
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
                                 Active
