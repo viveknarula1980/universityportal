@@ -183,9 +183,10 @@ export default function Blockchain() {
     });
   };
 
-  const formatDate = (timestamp: number) => {
-    if (!timestamp || isNaN(timestamp)) return "N/A";
-    const date = new Date(timestamp);
+  const formatDate = (timestamp: number | string) => {
+    const ts = Number(timestamp);
+    if (!ts || isNaN(ts)) return "N/A";
+    const date = new Date(ts);
     if (isNaN(date.getTime())) return "N/A";
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -197,9 +198,9 @@ export default function Blockchain() {
     });
   };
 
-  const getTimeAgo = (timestamp: number) => {
+  const getTimeAgo = (timestamp: number | string) => {
     const now = Date.now();
-    const diff = now - timestamp;
+    const diff = now - Number(timestamp);
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
     
@@ -216,7 +217,7 @@ export default function Blockchain() {
     return aiType && aiType !== "none";
   }).length;
   const activeCertificates = isAdmin 
-    ? certificates.filter(c => !c.revocation_status || c.revocation_status === 0).length 
+    ? certificates.filter(c => Number(c.revocation_status) === 0).length 
     : 0;
   const lastVerification = isAdmin 
     ? (certificates.length > 0 
@@ -350,13 +351,13 @@ export default function Blockchain() {
                             <h3 className="font-display font-semibold">
                               {cert.degree_type} in {cert.degree_name}
                             </h3>
-                            {(!cert.revocation_status || cert.revocation_status === 0) && (
+                            {Number(cert.revocation_status) === 0 && (
                               <Badge className="bg-success/10 text-success border-0">
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
                                 Active
                               </Badge>
                             )}
-                            {cert.revocation_status === 1 && (
+                            {Number(cert.revocation_status) === 1 && (
                               <Badge className="bg-destructive/10 text-destructive border-0">
                                 Revoked
                               </Badge>

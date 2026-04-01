@@ -187,9 +187,10 @@ export default function AdminDashboard() {
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    if (!timestamp || isNaN(timestamp)) return "N/A";
-    const date = new Date(timestamp);
+  const formatDate = (timestamp: number | string) => {
+    const ts = Number(timestamp);
+    if (!ts || isNaN(ts)) return "N/A";
+    const date = new Date(ts);
     if (isNaN(date.getTime())) return "N/A";
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -329,7 +330,7 @@ export default function AdminDashboard() {
               ) : (
                 <div className="space-y-4">
                   {filteredCertificates.map((certificate, index) => {
-                    const isActive = !certificate.revocation_status || certificate.revocation_status === 0;
+                    const isActive = Number(certificate.revocation_status) === 0;
                     return (
                       <div
                         key={certificate.id}

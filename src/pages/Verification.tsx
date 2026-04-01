@@ -92,16 +92,17 @@ export default function Verification() {
         console.log("Certificate data:", cert); // Debug
         
         // Backend returns status as string: 'valid', 'revoked', 'invalid', or 'not_found'
-        const status = cert.status || (cert.revocation_status === 1 ? "revoked" : "valid");
+        // Use Number() because PostgreSQL BIGINT returns as string
+        const status = cert.status || (Number(cert.revocation_status) === 1 ? "revoked" : "valid");
         
         // Format issue date - handle both number (timestamp) and string
+        // PostgreSQL BIGINT comes as string like "1773273600000"
         let formattedDate = "";
         const issueDateValue = cert.issue_date || cert.issueDate;
         if (issueDateValue) {
           try {
-            const date = typeof issueDateValue === 'number' 
-              ? new Date(issueDateValue) 
-              : new Date(issueDateValue);
+            const ts = Number(issueDateValue);
+            const date = !isNaN(ts) && ts > 0 ? new Date(ts) : new Date(issueDateValue);
             if (!isNaN(date.getTime())) {
               formattedDate = date.toLocaleDateString("en-US", {
                 year: "numeric",

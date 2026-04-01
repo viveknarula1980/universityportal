@@ -208,7 +208,7 @@ router.get('/verify/:certificateId', async (req, res) => {
 
     // Determine status: revoked > invalid > valid
     let status = 'valid';
-    if (certificate.revocation_status === 1) {
+    if (Number(certificate.revocation_status) === 1) {
       status = 'revoked';
     } else if (!isVerified) {
       status = 'invalid';

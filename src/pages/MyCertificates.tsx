@@ -144,7 +144,7 @@ export default function MyCertificates() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm truncate">{cert.degree_type} in {cert.degree_name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Issued: {new Date(cert.issue_date).toLocaleDateString()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Issued: {new Date(Number(cert.issue_date)).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
@@ -192,7 +192,7 @@ export default function MyCertificates() {
                             </div>
                             <div className="space-y-0.5">
                               <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-bold">Date of Issuance</p>
-                              <p className="text-[10px] font-bold">{new Date(selectedCert.issue_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                              <p className="text-[10px] font-bold">{new Date(Number(selectedCert.issue_date)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                             </div>
                           </div>
 
@@ -340,7 +340,7 @@ export default function MyCertificates() {
                   </div>
                   <div className="space-y-0.5">
                     <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Date of Issuance</p>
-                    <p className="text-xs font-bold">{new Date(selectedCert.issue_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                    <p className="text-xs font-bold">{new Date(Number(selectedCert.issue_date)).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
                   </div>
                 </div>
 
