@@ -18,9 +18,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/api";
+import { FacultyAILab } from "@/components/dashboard/FacultyAILab";
+import { FacultyRiskAnalytics } from "@/components/dashboard/FacultyRiskAnalytics";
 
 interface Submission {
   id: string;
@@ -273,8 +276,17 @@ export default function FacultyDashboard() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <Tabs defaultValue="submissions" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="ai-lab">AI Assignment Lab</TabsTrigger>
+            <TabsTrigger value="risk-analytics">Risk Analytics</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="submissions" className="space-y-6">
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -416,6 +428,16 @@ export default function FacultyDashboard() {
             </div>
           )}
         </div>
+          </TabsContent>
+
+          <TabsContent value="ai-lab">
+            <FacultyAILab />
+          </TabsContent>
+
+          <TabsContent value="risk-analytics">
+            <FacultyRiskAnalytics />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Submission Details Modal */}

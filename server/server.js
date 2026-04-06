@@ -14,6 +14,7 @@ import assignmentRoutes from './routes/assignments.js';
 import certificateRoutes from './routes/certificates.js';
 import aiRoutes from './routes/ai.js';
 import adminRoutes from './routes/admin.js';
+import superadminRoutes from './routes/superadmin.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -97,6 +98,7 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/superadmin', superadminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -127,16 +127,19 @@ export default function Login() {
       navigate("/faculty");
     } else if (user.role === "admin") {
       navigate("/admin");
+    } else if (user.role === "super_admin") {
+      navigate("/superadmin");
     } else {
       navigate("/");
     }
   };
 
-  const quickLogin = (role: "student" | "faculty" | "admin") => {
+  const quickLogin = (role: "student" | "faculty" | "admin" | "super_admin") => {
     const credentials: Record<string, { email: string; password: string }> = {
       student: { email: "student@university.edu", password: "student123" },
       faculty: { email: "faculty@university.edu", password: "faculty123" },
       admin: { email: "admin@university.edu", password: "admin123" },
+      super_admin: { email: "superadmin@university.edu", password: "superadmin123" },
     };
 
     const creds = credentials[role];
@@ -319,11 +322,11 @@ export default function Login() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => quickLogin("student")}
+                  onClick={() => quickLogin("admin")}
                   className="flex flex-col items-center gap-2 h-auto py-3 rounded-xl border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                 >
-                  <GraduationCap className="w-4 h-4" />
-                  <span className="text-xs font-medium">Student</span>
+                  <Settings className="w-4 h-4" />
+                  <span className="text-xs font-medium">Admin</span>
                 </Button>
                 <Button
                   type="button"
@@ -339,11 +342,11 @@ export default function Login() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => quickLogin("admin")}
+                  onClick={() => quickLogin("student")}
                   className="flex flex-col items-center gap-2 h-auto py-3 rounded-xl border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                 >
-                  <Settings className="w-4 h-4" />
-                  <span className="text-xs font-medium">Admin</span>
+                  <GraduationCap className="w-4 h-4" />
+                  <span className="text-xs font-medium">Student</span>
                 </Button>
               </div>
             </div>

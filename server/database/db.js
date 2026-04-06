@@ -142,6 +142,14 @@ export async function initDatabase() {
           await db.runAsync("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT 0");
           await db.runAsync("UPDATE users SET is_verified = 1");
         }
+
+        const assignmentsTableInfo = await db.allAsync("PRAGMA table_info(assignments)");
+        const hasStream = assignmentsTableInfo.some(col => col.name === 'stream');
+
+        if (!hasStream) {
+          console.log('🔄 Adding stream column to assignments table...');
+          await db.runAsync("ALTER TABLE assignments ADD COLUMN stream TEXT");
+        }
       } catch (migrationError) {
         console.warn('⚠️ Migration check failed:', migrationError.message);
       }

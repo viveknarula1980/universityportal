@@ -163,7 +163,18 @@ router.post('/submit', authenticateToken, requireRole('student'), upload.single(
 // Get assignments
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const assignments = await db.allAsync('SELECT * FROM assignments ORDER BY due_date DESC');
+    let query = 'SELECT * FROM assignments';
+    let params = [];
+    
+    // Stream based filtering for students and faculty
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin' && req.user.department) {
+      query += ' WHERE stream = ? OR stream IS NULL';
+      params.push(req.user.department);
+    }
+    
+    query += ' ORDER BY due_date DESC';
+    
+    const assignments = await db.allAsync(query, params);
     res.json({ success: true, data: assignments });
   } catch (error) {
     console.error('Error fetching assignments:', error);
@@ -212,7 +223,8 @@ router.get('/faculty/submissions', authenticateToken, requireRole('faculty'), as
         a.course,
         u.name as student_name,
         u.student_id,
-        u.email as student_email
+        u.email as student_email,
+        u.department as student_stream
       FROM submissions s
       JOIN assignments a ON s.assignment_id = a.id
       JOIN users u ON s.student_id = u.id
@@ -220,6 +232,12 @@ router.get('/faculty/submissions', authenticateToken, requireRole('faculty'), as
     `;
     
     const params = [];
+    
+    // Stream-based isolation for faculty
+    if (req.user.role === 'faculty' && req.user.department) {
+       query += ' AND u.department = ?';
+       params.push(req.user.department);
+    }
     
     if (course && course !== 'all') {
       query += ' AND a.course = ?';

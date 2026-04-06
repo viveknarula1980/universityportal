@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     name TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('student', 'faculty', 'admin')),
+    role TEXT NOT NULL CHECK(role IN ('student', 'faculty', 'admin', 'super_admin')),
     student_id TEXT,
     department TEXT,
     google_id TEXT UNIQUE,
@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS assignments (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     course TEXT NOT NULL,
+    stream TEXT,
     due_date INTEGER NOT NULL,
     created_at INTEGER NOT NULL
 );

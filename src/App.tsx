@@ -22,6 +22,7 @@ import FacultyLogin from "./pages/FacultyLogin";
 import AdminLogin from "./pages/AdminLogin";
 import Verification from "./pages/Verification";
 import NotFound from "./pages/NotFound";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -128,6 +129,16 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="admin">
                   <CertificateIssuance />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Super Admin Routes */}
+            <Route
+              path="/superadmin"
+              element={
+                <ProtectedRoute requiredRole="super_admin">
+                  <SuperAdminDashboard />
                 </ProtectedRoute>
               }
             />

@@ -40,9 +40,10 @@ router.post('/register', [
 
     // Create default users on first registration if they don't exist
     const defaultUsers = [
+      { email: 'superadmin@university.edu', password: 'superadmin123', name: 'System Super Admin', role: 'super_admin' },
       { email: 'admin@university.edu', password: 'admin123', name: 'Admin User', role: 'admin' },
-      { email: 'student@university.edu', password: 'student123', name: 'Anupam', role: 'student', studentId: 'CS2024-0892' },
-      { email: 'faculty@university.edu', password: 'faculty123', name: 'Dr. Smith', role: 'faculty' },
+      { email: 'student@university.edu', password: 'student123', name: 'Anupam', role: 'student', studentId: 'CS2024-0892', department: 'CSE' },
+      { email: 'faculty@university.edu', password: 'faculty123', name: 'Dr. Smith', role: 'faculty', department: 'CSE' },
     ];
 
     const defaultUser = defaultUsers.find(u => u.email === email);

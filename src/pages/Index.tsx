@@ -5,6 +5,7 @@ import { AIUsageMeter } from "@/components/dashboard/AIUsageMeter";
 import { CareerAgent } from "@/components/dashboard/CareerAgent";
 import { AssignmentCard } from "@/components/dashboard/AssignmentCard";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { ResearchLab } from "@/components/dashboard/ResearchLab";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -284,6 +285,9 @@ const Index = () => {
 
         {/* AI Career Agent (CV / LinkedIn) */}
         <CareerAgent />
+        
+        {/* AI Research Lab (Academic Search) */}
+        <ResearchLab />
       </div>
     </MainLayout>
   );

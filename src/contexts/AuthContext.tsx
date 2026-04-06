@@ -4,7 +4,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: "student" | "faculty" | "admin";
+  role: "student" | "faculty" | "admin" | "super_admin";
   studentId?: string;
   department?: string;
   isVerified?: boolean;
@@ -13,10 +13,10 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ requireOTP?: boolean; email?: string }>;
-  loginWithGoogle: (credential: string, role?: "student" | "faculty" | "admin") => Promise<void>;
+  loginWithGoogle: (credential: string, role?: "student" | "faculty" | "admin" | "super_admin") => Promise<void>;
   sendOTP: (email: string) => Promise<void>;
   verifyOTP: (email: string, code: string) => Promise<void>;
-  register: (email: string, password: string, name: string, role: "student" | "faculty" | "admin", studentId?: string) => Promise<void>;
+  register: (email: string, password: string, name: string, role: "student" | "faculty" | "admin" | "super_admin", studentId?: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     name: string,
-    role: "student" | "faculty" | "admin",
+    role: "student" | "faculty" | "admin" | "super_admin",
     studentId?: string
   ) => {
     setIsLoading(true);
@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginWithGoogle = async (credential: string, role?: "student" | "faculty" | "admin") => {
+  const loginWithGoogle = async (credential: string, role?: "student" | "faculty" | "admin" | "super_admin") => {
     setIsLoading(true);
     try {
       const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";

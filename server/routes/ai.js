@@ -441,5 +441,192 @@ router.get('/validate', authenticateToken, async (req, res) => {
   }
 });
 
+// --- Faculty: Generate Assignment ---
+router.post('/faculty/generate-assignment', authenticateToken, requireRole('faculty'), async (req, res) => {
+  try {
+    const { topic, difficulty, learningGoals } = req.body;
+    
+    if (!topic) {
+      return res.status(400).json({ success: false, error: 'Topic is required' });
+    }
+    
+    const systemPrompt = `You are an expert curriculum designer. Generate a structured, comprehensive assignment.
+The output MUST be a valid JSON object matching this EXACT structure:
+{
+  "title": "...",
+  "description": "...",
+  "instructions": ["...", "..."],
+  "gradingCriteria": ["...", "..."],
+  "estimatedTimeHours": 4
+}`;
+
+    const prompt = `Create an assignment on the topic "${topic}". 
+Difficulty level: ${difficulty || 'Intermediate'}. 
+Learning goals: ${learningGoals || 'General understanding and application'}.`;
+
+    const result = await aiService.generateContent(prompt, {
+      maxTokens: 2000,
+      temperature: 0.7,
+      systemPrompt: systemPrompt
+    });
+
+    let assignmentData;
+    try {
+      let content = result.content;
+      const startIndex = content.indexOf('{');
+      const endIndex = content.lastIndexOf('}');
+      if (startIndex !== -1 && endIndex !== -1) {
+        content = content.substring(startIndex, endIndex + 1);
+      }
+      assignmentData = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse AI assignment JSON:', parseError);
+      return res.status(500).json({ success: false, error: 'AI failed to return valid assignment data.' });
+    }
+
+    res.json({ success: true, data: assignmentData });
+  } catch (error) {
+    console.error('generate-assignment error:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate assignment' });
+  }
+});
+
+// --- Faculty: Student Risk Analytics ---
+router.get('/faculty/student-risk-analytics', authenticateToken, requireRole('faculty'), async (req, res) => {
+  try {
+    // 1. Fetch all students in faculty's department and their grades
+    let studentsQuery = `
+      SELECT u.id, u.name, u.student_id, u.department
+      FROM users u
+      WHERE u.role = 'student'
+    `;
+    const params = [];
+    if (req.user.department) {
+      studentsQuery += ` AND u.department = ?`;
+      params.push(req.user.department);
+    }
+    
+    const students = await db.allAsync(studentsQuery, params);
+    
+    if (students.length === 0) {
+      return res.json({ success: true, data: { atRiskStudents: [] } });
+    }
+
+    // Prepare data summary
+    const studentPromises = students.map(async (student) => {
+      const submissions = await db.allAsync(`
+        SELECT a.title, s.grade, s.status, s.created_at
+        FROM submissions s
+        JOIN assignments a ON s.assignment_id = a.id
+        WHERE s.student_id = ?
+      `, [student.id]);
+      
+      const grades = submissions.map(s => s.grade || 'Ungraded');
+      
+      return {
+        id: student.id,
+        name: student.name,
+        studentId: student.student_id,
+        submissionCount: submissions.length,
+        grades: grades
+      };
+    });
+    
+    const studentData = await Promise.all(studentPromises);
+    
+    // 2. Formulate Prompt
+    const systemPrompt = `You are an educational data analyst. Review the provided student data (submissions & grades) to identify students who are "At-Risk" of failing or falling behind.
+Return ONLY a valid JSON object matching this EXACT structure:
+{
+  "atRiskStudents": [
+    {
+      "studentId": "...",
+      "name": "...",
+      "riskLevel": "High|Medium|Low",
+      "reasoning": "...",
+      "recommendedIntervention": "..."
+    }
+  ],
+  "insights": "General observation about the class performance"
+}`;
+
+    const prompt = `Here is the anonymous data for my class:\n${JSON.stringify(studentData, null, 2)}\n\nAnalyze this data and identify at-risk students.`;
+
+    const result = await aiService.generateContent(prompt, {
+      maxTokens: 3000,
+      temperature: 0.5,
+      systemPrompt: systemPrompt
+    });
+
+    let riskData;
+    try {
+      let content = result.content;
+      const startIndex = content.indexOf('{');
+      const endIndex = content.lastIndexOf('}');
+      if (startIndex !== -1 && endIndex !== -1) {
+        content = content.substring(startIndex, endIndex + 1);
+      }
+      riskData = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse risk analytics:', parseError, result.content);
+      return res.status(500).json({ success: false, error: 'AI failed to process analytics.' });
+    }
+
+    res.json({ success: true, data: riskData });
+  } catch (error) {
+    console.error('student-risk-analytics error:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate risk analytics' });
+  }
+});
+
+// --- Student: AI Research Lab ---
+router.post('/student/research-lab', authenticateToken, requireRole('student'), async (req, res) => {
+  try {
+    const { query } = req.body;
+    
+    if (!query) {
+      return res.status(400).json({ success: false, error: 'Research query is required' });
+    }
+    
+    const systemPrompt = `You are a strict academic research assistant. You provide thorough answers.
+Crucially, you MUST "fake" generating sources for your claims to demonstrate a transparency feature. Ensure your response is highly academic and includes inline citations [1], [2].
+Return ONLY a valid JSON object matching this EXACT structure:
+{
+  "summary": "...",
+  "detailedExplanation": "...",
+  "sources": [
+    { "id": 1, "title": "...", "author": "...", "year": "..." }
+  ]
+}`;
+
+    const prompt = `Research Query: "${query}". Please provide an academic summary and detailed explanation.`;
+
+    const result = await aiService.generateContent(prompt, {
+      maxTokens: 2500,
+      temperature: 0.6,
+      systemPrompt: systemPrompt
+    });
+
+    let researchData;
+    try {
+      let content = result.content;
+      const startIndex = content.indexOf('{');
+      const endIndex = content.lastIndexOf('}');
+      if (startIndex !== -1 && endIndex !== -1) {
+        content = content.substring(startIndex, endIndex + 1);
+      }
+      researchData = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse research data:', parseError);
+      return res.status(500).json({ success: false, error: 'AI failed to process research query.' });
+    }
+
+    res.json({ success: true, data: researchData });
+  } catch (error) {
+    console.error('research-lab error:', error);
+    res.status(500).json({ success: false, error: 'Failed to process research query' });
+  }
+});
+
 export default router;
 
