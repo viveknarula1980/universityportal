@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:3000/api");
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ) => {
     setIsLoading(true);
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:3000/api");
       const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = async (credential: string, role?: "student" | "faculty" | "admin" | "super_admin") => {
     setIsLoading(true);
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:3000/api");
       const response = await fetch(`${API_URL}/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sendOTP = async (email: string) => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:3000/api");
       const response = await fetch(`${API_URL}/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyOTP = async (email: string, code: string) => {
     setIsLoading(true);
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:3000/api");
       const response = await fetch(`${API_URL}/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

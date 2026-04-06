@@ -22,7 +22,7 @@ export default function SuperAdminDashboard() {
     e.preventDefault();
     try {
       // In a real app this would go through apiService.createAdmin
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:3000/api");
       const token = localStorage.getItem("token");
       
       const response = await fetch(`${API_URL}/superadmin/admins`, {
