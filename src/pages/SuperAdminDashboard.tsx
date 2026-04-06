@@ -166,8 +166,13 @@ export default function SuperAdminDashboard() {
                       <Input placeholder="oxford" value={instSlug} onChange={e => setInstSlug(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
-                      <Label>Primary Color</Label>
-                      <Input type="color" className="h-10 p-1" value={instColor} onChange={e => setInstColor(e.target.value)} />
+                      <Label>Logo URL</Label>
+                      <div className="flex gap-3 items-center">
+                        <Input placeholder="https://..." value={instLogo} onChange={e => setInstLogo(e.target.value)} className="flex-1" />
+                        <div className="w-12 h-12 rounded border border-zinc-200 flex items-center justify-center bg-zinc-50 overflow-hidden shrink-0">
+                          {instLogo ? <img src={instLogo} className="w-full h-full object-contain" /> : <Palette className="w-4 h-4 text-zinc-300" />}
+                        </div>
+                      </div>
                     </div>
                     <div className="space-y-2 border-t pt-4 mt-4">
                       <Label className="text-primary font-bold">Admin Credentials</Label>

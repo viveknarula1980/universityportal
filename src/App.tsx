@@ -57,13 +57,15 @@ function BrandingProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchBranding = async () => {
       try {
-        // Detect slug from URL if present (e.g., /p/oxford/login)
         const pathParts = window.location.pathname.split('/');
         let slug = '';
+        
         if (pathParts[1] === 'p' && pathParts[2]) {
           slug = pathParts[2];
         } else {
-          slug = localStorage.getItem('university_slug') || '';
+          // If not in a branded path, we ensure we use default branding
+          // and clear any previous session branding to prevent "ghosting"
+          slug = '';
         }
 
         const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
@@ -92,7 +94,7 @@ function BrandingProvider({ children }: { children: React.ReactNode }) {
       } catch (err) { }
     };
     fetchBranding();
-  }, []);
+  }, [window.location.pathname]);
   
   return <>{children}</>;
 }
