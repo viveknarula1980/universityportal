@@ -189,6 +189,14 @@ export async function initDatabase() {
     // Create default users if they don't exist
     const defaultUsers = [
       {
+        email: 'superadmin@university.edu',
+        password: 'superadmin123',
+        name: 'System Super Admin',
+        role: 'super_admin',
+        student_id: null,
+        department: null
+      },
+      {
         email: 'admin@university.edu',
         password: 'admin123',
         name: 'Admin User',
