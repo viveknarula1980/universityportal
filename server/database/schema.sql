@@ -9,8 +9,10 @@ CREATE TABLE IF NOT EXISTS users (
     department TEXT,
     google_id TEXT UNIQUE,
     is_verified BOOLEAN DEFAULT 0,
+    university_id TEXT,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (university_id) REFERENCES university_settings(id)
 );
 
 -- OTP Codes Table
@@ -125,6 +127,7 @@ CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage(user_id);
 -- Settings Table
 CREATE TABLE IF NOT EXISTS university_settings (
     id TEXT PRIMARY KEY,
+    slug TEXT UNIQUE,
     university_name TEXT,
     primary_color TEXT,
     logo_url TEXT,

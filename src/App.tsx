@@ -57,16 +57,36 @@ function BrandingProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchBranding = async () => {
       try {
+        // Detect slug from URL if present (e.g., /p/oxford/login)
+        const pathParts = window.location.pathname.split('/');
+        let slug = '';
+        if (pathParts[1] === 'p' && pathParts[2]) {
+          slug = pathParts[2];
+        } else {
+          slug = localStorage.getItem('university_slug') || '';
+        }
+
         const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
-        const res = await fetch(`${API_URL}/superadmin/branding`);
+        const urlRequest = slug ? `${API_URL}/superadmin/branding?slug=${slug}` : `${API_URL}/superadmin/branding`;
+        
+        const res = await fetch(urlRequest);
         const data = await res.json();
+        
         if (data.success && data.data) {
           if (data.data.university_name) {
             document.title = data.data.university_name;
+            localStorage.setItem('university_name', data.data.university_name);
           }
           if (data.data.primary_color) {
             const hsl = hexToHSL(data.data.primary_color);
             document.documentElement.style.setProperty('--primary', hsl);
+            localStorage.setItem('primary_color', data.data.primary_color);
+          }
+          if (data.data.logo_url) {
+            localStorage.setItem('logo_url', data.data.logo_url);
+          }
+          if (data.data.slug) {
+            localStorage.setItem('university_slug', data.data.slug);
           }
         }
       } catch (err) { }
@@ -95,6 +115,13 @@ const App = () => (
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
+            
+            {/* Branded Entry Points */}
+            <Route path="/p/:slug/login" element={<Login />} />
+            <Route path="/p/:slug/login/student" element={<StudentLogin />} />
+            <Route path="/p/:slug/login/faculty" element={<FacultyLogin />} />
+            <Route path="/p/:slug/login/admin" element={<AdminLogin />} />
+            
             <Route path="/login/student" element={<StudentLogin />} />
             <Route path="/login/faculty" element={<FacultyLogin />} />
             <Route path="/login/admin" element={<AdminLogin />} />

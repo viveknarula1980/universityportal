@@ -41,12 +41,18 @@ export function StudentSidebar() {
       <div className="p-6 flex items-center justify-between border-b border-sidebar-border">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-primary-foreground" />
+            {localStorage.getItem('logo_url') ? (
+              <img src={localStorage.getItem('logo_url') || ''} alt="logo" className="w-6 h-6 object-contain" />
+            ) : (
+              <Sparkles className="w-5 h-5 text-primary-foreground" />
+            )}
           </div>
           {!collapsed && (
             <div>
-              <h1 className="font-display font-bold text-lg">EduChain</h1>
-              <p className="text-xs text-sidebar-foreground/60">Student Portal</p>
+              <h1 className="font-display font-bold text-lg leading-tight truncate max-w-[120px]">
+                {localStorage.getItem('university_name') || 'EduChain'}
+              </h1>
+              <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">Student Portal</p>
             </div>
           )}
         </div>

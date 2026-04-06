@@ -131,6 +131,7 @@ export async function initDatabase() {
         const tableInfo = await db.allAsync("PRAGMA table_info(users)");
         const hasGoogleId = tableInfo.some(col => col.name === 'google_id');
         const hasIsVerified = tableInfo.some(col => col.name === 'is_verified');
+        const hasUniversityId = tableInfo.some(col => col.name === 'university_id');
 
         if (!hasGoogleId) {
           console.log('🔄 Adding google_id column to users table...');
@@ -141,6 +142,20 @@ export async function initDatabase() {
           console.log('🔄 Adding is_verified column to users table...');
           await db.runAsync("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT 0");
           await db.runAsync("UPDATE users SET is_verified = 1");
+        }
+
+        if (!hasUniversityId) {
+          console.log('🔄 Adding university_id column to users table...');
+          await db.runAsync("ALTER TABLE users ADD COLUMN university_id TEXT");
+          await db.runAsync("UPDATE users SET university_id = 'default'");
+        }
+
+        const settingsInfo = await db.allAsync("PRAGMA table_info(university_settings)");
+        const hasSlug = settingsInfo.some(col => col.name === 'slug');
+        if (!hasSlug) {
+          console.log('🔄 Adding slug column to university_settings table...');
+          await db.runAsync("ALTER TABLE university_settings ADD COLUMN slug TEXT UNIQUE");
+          await db.runAsync("UPDATE university_settings SET slug = 'default' WHERE id = 'default'");
         }
 
         const assignmentsTableInfo = await db.allAsync("PRAGMA table_info(assignments)");
@@ -154,35 +169,31 @@ export async function initDatabase() {
         console.warn('⚠️ Migration check failed:', migrationError.message);
       }
     } else {
-        // Postgres migration: Ensure all INTEGER columns are BIGINT to prevent overflow
+        // Postgres migration
         try {
-          console.log('🔄 Checking for INTEGER to BIGINT migrations (PostgreSQL)...');
-          const tables = ['users', 'otp_codes', 'assignments', 'submissions', 'certificates', 'ai_usage', 'ai_limits', 'audit_logs', 'blockchain_records'];
-          for (const table of tables) {
-            // Get columns for the table
-            const colsResult = await pool.query(`
-              SELECT column_name, data_type 
-              FROM information_schema.columns 
-              WHERE table_name = $1 AND data_type = 'integer'
-            `, [table]);
-            
-            for (const col of colsResult.rows) {
-              console.log(`⬆️ Upgrading column ${table}.${col.column_name} to BIGINT...`);
-              await db.execAsync(`ALTER TABLE ${table} ALTER COLUMN ${col.column_name} TYPE BIGINT`);
-            }
+          console.log('🔄 Checking for PostgreSQL migrations (slug, university_id)...');
+          
+          // Check users for university_id
+          const hasUnivId = await pool.query(`
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'users' AND column_name = 'university_id'
+          `);
+          if (hasUnivId.rowCount === 0) {
+            await db.execAsync("ALTER TABLE users ADD COLUMN university_id TEXT");
+            await db.execAsync("UPDATE users SET university_id = 'default'");
+          }
+
+          // Check university_settings for slug
+          const hasSlug = await pool.query(`
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'university_settings' AND column_name = 'slug'
+          `);
+          if (hasSlug.rowCount === 0) {
+            await db.execAsync("ALTER TABLE university_settings ADD COLUMN slug TEXT UNIQUE");
+            await db.execAsync("UPDATE university_settings SET slug = 'default' WHERE id = 'default'");
           }
         } catch (migrationError) {
           console.warn('⚠️ Postgres migration check failed:', migrationError.message);
-        }
-
-        // Fix NULL revocation_status in certificates (should always be 0 or 1)
-        try {
-          const fixResult = await pool.query('UPDATE certificates SET revocation_status = 0 WHERE revocation_status IS NULL');
-          if (fixResult.rowCount > 0) {
-            console.log(`🔧 Fixed ${fixResult.rowCount} certificates with NULL revocation_status`);
-          }
-        } catch (fixErr) {
-          console.warn('⚠️ Could not fix NULL revocation_status:', fixErr.message);
         }
     }
 
@@ -239,8 +250,8 @@ export async function initDatabase() {
         console.log(`🏗️ Creating missing default user: ${user.email}`);
         
         await db.runAsync(`
-          INSERT INTO users (id, email, password_hash, name, role, student_id, department, is_verified, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO users (id, email, password_hash, name, role, student_id, department, is_verified, university_id, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           userId,
           user.email,
@@ -250,20 +261,19 @@ export async function initDatabase() {
           user.student_id,
           user.department,
           IS_POSTGRES ? true : 1,
+          'default',
           now,
           now
         ]);
         console.log(`✅ Default ${user.role} user created: ${user.email}`);
       }
     }
-
-    console.log('✅ Database initialization complete\n');
-
+    
     // Seed default branding settings
     const settingsExists = await db.getAsync("SELECT id FROM university_settings WHERE id = 'default'");
     if (!settingsExists) {
-        await db.runAsync("INSERT INTO university_settings (id, university_name, primary_color, logo_url, updated_at) VALUES (?, ?, ?, ?, ?)", 
-        ['default', 'EduChain University', '#06b6d4', 'https://example.com/logo.png', Date.now()]);
+        await db.runAsync("INSERT INTO university_settings (id, slug, university_name, primary_color, logo_url, updated_at) VALUES (?, ?, ?, ?, ?, ?)", 
+        ['default', 'default', 'EduChain University', '#06b6d4', 'https://example.com/logo.png', Date.now()]);
         console.log('✅ Default branding settings initialized');
     }
 

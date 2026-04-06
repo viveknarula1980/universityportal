@@ -144,9 +144,13 @@ export default function StudentLogin() {
           
           <div className="flex items-center gap-3 mb-12">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500">
-              <GraduationCap className="w-5 h-5 text-white" />
+              {localStorage.getItem('logo_url') ? (
+                <img src={localStorage.getItem('logo_url') || ''} alt="logo" className="w-6 h-6 object-contain" />
+              ) : (
+                <GraduationCap className="w-5 h-5 text-white" />
+              )}
             </div>
-            <span className="text-xl font-display font-bold">Student Portal</span>
+            <span className="text-xl font-display font-bold">{localStorage.getItem('university_name') || 'Student Portal'}</span>
           </div>
 
           <div className="space-y-6 mt-20 max-w-md">
@@ -181,9 +185,13 @@ export default function StudentLogin() {
           
           <div className="lg:hidden text-center mb-8">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 mb-3">
-              <GraduationCap className="w-6 h-6 text-white" />
+              {localStorage.getItem('logo_url') ? (
+                <img src={localStorage.getItem('logo_url') || ''} alt="logo" className="w-6 h-6 object-contain" />
+              ) : (
+                <GraduationCap className="w-6 h-6 text-white" />
+              )}
             </div>
-            <h1 className="text-2xl font-display font-bold">Student Login</h1>
+            <h1 className="text-2xl font-display font-bold">{localStorage.getItem('university_name') || 'Student Login'}</h1>
           </div>
 
           <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-xl border border-zinc-200 dark:border-zinc-800">

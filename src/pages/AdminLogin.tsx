@@ -122,9 +122,13 @@ export default function AdminLogin() {
           
           <div className="flex items-center gap-3 mb-12">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500">
-              <Settings className="w-5 h-5 text-white" />
+              {localStorage.getItem('logo_url') ? (
+                <img src={localStorage.getItem('logo_url') || ''} alt="logo" className="w-6 h-6 object-contain" />
+              ) : (
+                <Settings className="w-5 h-5 text-white" />
+              )}
             </div>
-            <span className="text-xl font-display font-bold text-amber-500">Admin Central</span>
+            <span className="text-xl font-display font-bold text-amber-500">{localStorage.getItem('university_name') || 'Admin Central'}</span>
           </div>
 
           <div className="space-y-6 mt-20 max-w-md">
@@ -159,9 +163,13 @@ export default function AdminLogin() {
           
           <div className="lg:hidden text-center mb-8">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 mb-3">
-              <Settings className="w-6 h-6 text-white" />
+              {localStorage.getItem('logo_url') ? (
+                <img src={localStorage.getItem('logo_url') || ''} alt="logo" className="w-6 h-6 object-contain" />
+              ) : (
+                <Settings className="w-6 h-6 text-white" />
+              )}
             </div>
-            <h1 className="text-2xl font-display font-bold">Admin Login</h1>
+            <h1 className="text-2xl font-display font-bold">{localStorage.getItem('university_name') || 'Admin Login'}</h1>
           </div>
 
           <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-xl border border-zinc-200 dark:border-zinc-800">
