@@ -70,4 +70,31 @@ router.post('/admins', authenticateToken, requireRole('super_admin'), async (req
   }
 });
 
+// Get branding settings (Publicly accessible so login screen is branded)
+router.get('/branding', async (req, res) => {
+  try {
+    const settings = await db.getAsync("SELECT university_name, primary_color, logo_url FROM university_settings WHERE id = 'default'");
+    res.json({ success: true, data: settings || {} });
+  } catch (error) {
+    console.error('Error fetching branding:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch branding' });
+  }
+});
+
+// Update branding settings
+router.put('/branding', authenticateToken, requireRole('super_admin'), async (req, res) => {
+  try {
+    const { universityName, primaryColor, logoUrl } = req.body;
+    await db.runAsync(`
+      UPDATE university_settings 
+      SET university_name = ?, primary_color = ?, logo_url = ?, updated_at = ?
+      WHERE id = 'default'
+    `, [universityName, primaryColor, logoUrl, Date.now()]);
+    res.json({ success: true, message: 'Branding updated successfully' });
+  } catch (error) {
+    console.error('Error updating branding:', error);
+    res.status(500).json({ success: false, error: 'Failed to update branding' });
+  }
+});
+
 export default router;

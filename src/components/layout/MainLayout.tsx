@@ -4,10 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { StudentSidebar } from "./StudentSidebar";
 import { FacultySidebar } from "./FacultySidebar";
 import { AdminSidebar } from "./AdminSidebar";
+import { SuperAdminSidebar } from "./SuperAdminSidebar";
 
 interface MainLayoutProps {
   children: ReactNode;
-  role?: "student" | "faculty" | "admin";
+  role?: "student" | "faculty" | "admin" | "super_admin";
 }
 
 export function MainLayout({ children, role }: MainLayoutProps) {
@@ -15,15 +16,17 @@ export function MainLayout({ children, role }: MainLayoutProps) {
   const { user } = useAuth();
   
   // Determine role: use prop first, then user's role, then detect from path
-  let detectedRole: "student" | "faculty" | "admin" = "student";
+  let detectedRole: "student" | "faculty" | "admin" | "super_admin" = "student";
   if (role) {
     detectedRole = role;
   } else if (user?.role) {
     // Use the actual user's role from auth context
-    detectedRole = user.role as "student" | "faculty" | "admin";
+    detectedRole = user.role as "student" | "faculty" | "admin" | "super_admin";
   } else {
     // Fallback to path detection
-    if (location.pathname.startsWith("/faculty")) {
+    if (location.pathname.startsWith("/superadmin")) {
+      detectedRole = "super_admin";
+    } else if (location.pathname.startsWith("/faculty")) {
       detectedRole = "faculty";
     } else if (location.pathname.startsWith("/admin") || location.pathname.startsWith("/certificate-issuance")) {
       detectedRole = "admin";
@@ -34,6 +37,8 @@ export function MainLayout({ children, role }: MainLayoutProps) {
 
   const renderSidebar = () => {
     switch (detectedRole) {
+      case "super_admin":
+        return <SuperAdminSidebar />;
       case "faculty":
         return <FacultySidebar />;
       case "admin":

@@ -17,6 +17,50 @@ export default function SuperAdminDashboard() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [stream, setStream] = useState("");
+
+  const [brandName, setBrandName] = useState("EduChain University");
+  const [brandColor, setBrandColor] = useState("#06b6d4");
+  const [brandLogo, setBrandLogo] = useState("");
+  const [isSavingBrand, setIsSavingBrand] = useState(false);
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
+      try {
+        const res = await fetch(`${API_URL}/superadmin/branding`);
+        const data = await res.json();
+        if (data.success && data.data) {
+          setBrandName(data.data.university_name || "");
+          setBrandColor(data.data.primary_color || "");
+          setBrandLogo(data.data.logo_url || "");
+        }
+      } catch (err) { }
+    };
+    fetchBranding();
+  }, []);
+
+  const handleSaveBranding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingBrand(true);
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/superadmin/branding`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ universityName: brandName, primaryColor: brandColor, logoUrl: brandLogo })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Branding Saved", description: "Changes saved. Hard refresh the page to see changes." });
+      } else {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to save branding", variant: "destructive" });
+    }
+    setIsSavingBrand(false);
+  };
   
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,24 +150,26 @@ export default function SuperAdminDashboard() {
                   <CardDescription>Configure branding dynamically for pitch presentations.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4 opacity-70 cursor-not-allowed">
+                  <form onSubmit={handleSaveBranding} className="space-y-4">
                     <div className="space-y-2">
                       <Label>University Name</Label>
-                      <Input value="EduChain University" disabled />
+                      <Input value={brandName} onChange={e => setBrandName(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
                       <Label>Primary Color (Hex)</Label>
                       <div className="flex gap-2">
-                        <Input value="#0066FF" disabled />
-                        <div className="w-10 h-10 rounded bg-[#0066FF]"></div>
+                        <Input value={brandColor} onChange={e => setBrandColor(e.target.value)} required />
+                        <div className="w-10 h-10 rounded border border-zinc-200" style={{ backgroundColor: brandColor }}></div>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Logo URL</Label>
-                      <Input value="https://example.com/logo.png" disabled />
+                      <Input value={brandLogo} onChange={e => setBrandLogo(e.target.value)} placeholder="https://..." />
                     </div>
-                    <Button disabled className="w-full">Save Branding Settings (Premium)</Button>
-                  </div>
+                    <Button type="submit" disabled={isSavingBrand} className="w-full">
+                      {isSavingBrand ? "Saving..." : "Save Branding Settings"}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
             </div>

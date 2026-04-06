@@ -1,0 +1,114 @@
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { 
+  Building2,
+  User,
+  Settings,
+  LogOut,
+  ChevronLeft
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+
+const navItems = [
+  { icon: Building2, label: "Super Admin Home", path: "/superadmin" },
+];
+
+export function SuperAdminSidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <aside 
+      className={cn(
+        "fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 z-50",
+        collapsed ? "w-20" : "w-64"
+      )}
+    >
+      {/* Logo */}
+      <div className="p-6 flex items-center justify-between border-b border-sidebar-border">
+        <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <Settings className="w-5 h-5 text-white" />
+          </div>
+          {!collapsed && (
+            <div>
+              <h1 className="font-display font-bold text-lg">EduChain</h1>
+              <p className="text-xs text-sidebar-foreground/60">Super Admin Domain</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-2">
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
+                isActive 
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg" 
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                collapsed && "justify-center px-3"
+              )}
+            >
+              <item.icon className="w-5 h-5 flex-shrink-0" />
+              {!collapsed && <span className="font-medium">{item.label}</span>}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* User Section */}
+      <div className="p-4 border-t border-sidebar-border">
+        <div className={cn(
+          "flex items-center gap-3 mb-4",
+          collapsed && "justify-center"
+        )}>
+          <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
+            <User className="w-5 h-5" />
+          </div>
+          {!collapsed && (
+            <div className="flex-1">
+              <p className="font-medium text-sm">{user?.name || "Super Admin"}</p>
+              <p className="text-xs text-sidebar-foreground/60">System Controller</p>
+            </div>
+          )}
+        </div>
+        
+        <Button 
+          variant="ghost" 
+          className={cn(
+            "w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+            collapsed ? "justify-center" : "justify-start"
+          )}
+          onClick={() => {
+            logout();
+            navigate("/");
+          }}
+        >
+          <LogOut className="w-4 h-4" />
+          {!collapsed && <span>Log out</span>}
+        </Button>
+      </div>
+
+      {/* Collapse Toggle */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-card border border-border shadow-md flex items-center justify-center hover:bg-accent transition-colors"
+      >
+        <ChevronLeft className={cn(
+          "w-4 h-4 text-foreground transition-transform",
+          collapsed && "rotate-180"
+        )} />
+      </button>
+    </aside>
+  );
+}

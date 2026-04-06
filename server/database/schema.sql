@@ -122,3 +122,12 @@ CREATE INDEX IF NOT EXISTS idx_certificates_student ON certificates(student_id);
 CREATE INDEX IF NOT EXISTS idx_blockchain_hash ON blockchain_records(blockchain_hash);
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage(user_id);
 
+-- Settings Table
+CREATE TABLE IF NOT EXISTS university_settings (
+    id TEXT PRIMARY KEY,
+    university_name TEXT,
+    primary_color TEXT,
+    logo_url TEXT,
+    updated_at INTEGER NOT NULL
+);
+

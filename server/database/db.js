@@ -258,6 +258,15 @@ export async function initDatabase() {
     }
 
     console.log('✅ Database initialization complete\n');
+
+    // Seed default branding settings
+    const settingsExists = await db.getAsync("SELECT id FROM university_settings WHERE id = 'default'");
+    if (!settingsExists) {
+        await db.runAsync("INSERT INTO university_settings (id, university_name, primary_color, logo_url, updated_at) VALUES (?, ?, ?, ?, ?)", 
+        ['default', 'EduChain University', '#06b6d4', 'https://example.com/logo.png', Date.now()]);
+        console.log('✅ Default branding settings initialized');
+    }
+
   } catch (error) {
     console.error('❌ Database initialization error:', error.message);
   }
