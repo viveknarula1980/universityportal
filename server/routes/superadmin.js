@@ -24,9 +24,10 @@ router.get('/instances', authenticateToken, requireRole('super_admin'), async (r
 // Create a new university instance + admin demo account
 router.post('/instances', authenticateToken, requireRole('super_admin'), async (req, res) => {
   try {
-    const { universityName, slug, primaryColor, logoUrl, adminEmail, adminPassword, adminName } = req.body;
+    const { universityName, name, slug, primaryColor, logoUrl, adminEmail, adminPassword, adminName } = req.body;
+    const finalUniversityName = universityName || name;
 
-    if (!universityName || !slug || !adminEmail || !adminPassword) {
+    if (!finalUniversityName || !slug || !adminEmail || !adminPassword) {
       return res.status(400).json({ success: false, error: 'Required fields missing' });
     }
 
@@ -44,7 +45,7 @@ router.post('/instances', authenticateToken, requireRole('super_admin'), async (
     await db.runAsync(`
       INSERT INTO university_settings (id, slug, university_name, primary_color, logo_url, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
-    `, [universityId, slug, universityName, primaryColor || '#06b6d4', logoUrl || '', now]);
+    `, [universityId, slug, finalUniversityName, primaryColor || '#06b6d4', logoUrl || '', now]);
 
     // Create admin user
     const passwordHash = await bcrypt.hash(adminPassword, 10);
@@ -52,7 +53,7 @@ router.post('/instances', authenticateToken, requireRole('super_admin'), async (
     await db.runAsync(`
       INSERT INTO users (id, email, password_hash, name, role, is_verified, university_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [userId, adminEmail, passwordHash, adminName || universityName + ' Admin', 'admin', 1, universityId, now, now]);
+    `, [userId, adminEmail, passwordHash, adminName || finalUniversityName + ' Admin', 'admin', 1, universityId, now, now]);
 
     res.json({ 
       success: true, 
