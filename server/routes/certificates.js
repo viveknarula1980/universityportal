@@ -94,8 +94,8 @@ router.post('/issue', authenticateToken, requireRole('admin'), async (req, res) 
     await db.runAsync(`
       INSERT INTO certificates (
         id, student_id, student_name, degree_name, degree_type,
-        issue_date, blockchain_hash, university_signature, qr_code_url, revocation_status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        issue_date, blockchain_hash, university_signature, qr_code_url, university_id, revocation_status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       certificateId,
       actualStudentId,
@@ -106,6 +106,7 @@ router.post('/issue', authenticateToken, requireRole('admin'), async (req, res) 
       blockchainResult.hash,
       certificateData.universitySignature,
       verificationUrl,
+      req.user.university_id || 'default',
       0,
       Date.now()
     ]);
@@ -245,14 +246,14 @@ router.get('/', authenticateToken, requireRole('admin', 'student', 'faculty'), a
   try {
     let certificates;
     if (req.user.role === 'admin' || req.user.role === 'faculty') {
-      // Admins and faculty can see all certificates
-      certificates = await db.allAsync('SELECT * FROM certificates ORDER BY created_at DESC');
+      // Admins and faculty can see certificates scoped to their university
+      certificates = await db.allAsync('SELECT * FROM certificates WHERE university_id = ? ORDER BY created_at DESC', [req.user.university_id || 'default']);
     } else {
       // Students can only see their own certificates
       // Note: student_id in certificates table points to users.id
       certificates = await db.allAsync(
-        'SELECT * FROM certificates WHERE student_id = ? ORDER BY created_at DESC',
-        [req.user.id]
+        'SELECT * FROM certificates WHERE student_id = ? AND university_id = ? ORDER BY created_at DESC',
+        [req.user.id, req.user.university_id || 'default']
       );
     }
     
@@ -276,9 +277,9 @@ router.get('/blockchain-records', authenticateToken, requireRole('admin'), async
       FROM certificates c
       JOIN users u ON c.student_id = u.id
       LEFT JOIN blockchain_records br ON br.record_id = c.id AND br.record_type = 'certificate'
-      WHERE c.blockchain_hash IS NOT NULL
+      WHERE c.blockchain_hash IS NOT NULL AND c.university_id = ?
       ORDER BY c.created_at DESC
-    `);
+    `, [req.user.university_id || 'default']);
     
     res.json({ success: true, data: certificates });
   } catch (error) {
@@ -422,8 +423,8 @@ router.post('/bulk-issue', authenticateToken, requireRole('admin'), async (req, 
         await db.runAsync(`
           INSERT INTO certificates (
             id, student_id, student_name, degree_name, degree_type,
-            issue_date, blockchain_hash, university_signature, qr_code_url, revocation_status, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            issue_date, blockchain_hash, university_signature, qr_code_url, university_id, revocation_status, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           certificateId,
           actualStudentId,
@@ -434,6 +435,7 @@ router.post('/bulk-issue', authenticateToken, requireRole('admin'), async (req, 
           blockchainResult.hash,
           certificateData.universitySignature,
           `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify/${certificateId}`,
+          req.user.university_id || 'default',
           0,
           Date.now()
         ]);

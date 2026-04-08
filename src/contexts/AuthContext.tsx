@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
+const getSlug = () => {
+  const match = window.location.pathname.match(/^\/p\/([^/]+)/);
+  return match ? match[1] : 'default';
+};
+
 export interface User {
   id: string;
   email: string;
@@ -55,7 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-University-Slug": getSlug()
+        },
         body: JSON.stringify({ email, password }),
       });
 
@@ -102,7 +110,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
       const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-University-Slug": getSlug()
+        },
         body: JSON.stringify({ email, password, name, role, studentId }),
       });
 
@@ -138,7 +149,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
       const response = await fetch(`${API_URL}/auth/google`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-University-Slug": getSlug()
+        },
         body: JSON.stringify({ credential, role }),
       });
 
@@ -169,7 +183,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
       const response = await fetch(`${API_URL}/auth/send-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-University-Slug": getSlug()
+        },
         body: JSON.stringify({ email }),
       });
 
@@ -189,7 +206,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
       const response = await fetch(`${API_URL}/auth/verify-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-University-Slug": getSlug()
+        },
         body: JSON.stringify({ email, code }),
       });
 

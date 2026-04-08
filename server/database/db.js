@@ -165,6 +165,29 @@ export async function initDatabase() {
           console.log('🔄 Adding stream column to assignments table...');
           await db.runAsync("ALTER TABLE assignments ADD COLUMN stream TEXT");
         }
+
+        const hasAssignmentUnivId = assignmentsTableInfo.some(col => col.name === 'university_id');
+        if (!hasAssignmentUnivId) {
+          console.log('🔄 Adding university_id column to assignments table...');
+          await db.runAsync("ALTER TABLE assignments ADD COLUMN university_id TEXT");
+          await db.runAsync("UPDATE assignments SET university_id = 'default'");
+        }
+
+        const certsTableInfo = await db.allAsync("PRAGMA table_info(certificates)");
+        const hasCertUnivId = certsTableInfo.some(col => col.name === 'university_id');
+        if (!hasCertUnivId) {
+           console.log('🔄 Adding university_id column to certificates table...');
+           await db.runAsync("ALTER TABLE certificates ADD COLUMN university_id TEXT");
+           await db.runAsync("UPDATE certificates SET university_id = 'default'");
+        }
+
+        const subsTableInfo = await db.allAsync("PRAGMA table_info(submissions)");
+        const hasSubUnivId = subsTableInfo.some(col => col.name === 'university_id');
+        if (!hasSubUnivId) {
+           console.log('🔄 Adding university_id column to submissions table...');
+           await db.runAsync("ALTER TABLE submissions ADD COLUMN university_id TEXT");
+           await db.runAsync("UPDATE submissions SET university_id = 'default'");
+        }
       } catch (migrationError) {
         console.warn('⚠️ Migration check failed:', migrationError.message);
       }
@@ -191,6 +214,18 @@ export async function initDatabase() {
           if (hasSlug.rowCount === 0) {
             await db.execAsync("ALTER TABLE university_settings ADD COLUMN slug TEXT UNIQUE");
             await db.execAsync("UPDATE university_settings SET slug = 'default' WHERE id = 'default'");
+          }
+
+          // Check assignments, certificates, submissions for university_id
+          for (const table of ['assignments', 'certificates', 'submissions']) {
+             const hasTableUnivId = await pool.query(`
+               SELECT column_name FROM information_schema.columns 
+               WHERE table_name = '${table}' AND column_name = 'university_id'
+             `);
+             if (hasTableUnivId.rowCount === 0) {
+               await db.execAsync(`ALTER TABLE ${table} ADD COLUMN university_id TEXT`);
+               await db.execAsync(`UPDATE ${table} SET university_id = 'default'`);
+             }
           }
         } catch (migrationError) {
           console.warn('⚠️ Postgres migration check failed:', migrationError.message);

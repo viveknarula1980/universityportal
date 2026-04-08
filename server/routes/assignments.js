@@ -37,13 +37,14 @@ router.post('/submit', authenticateToken, requireRole('student'), upload.single(
       };
       
       await db.runAsync(`
-        INSERT INTO assignments (id, title, course, due_date, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO assignments (id, title, course, due_date, university_id, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
       `, [
         assignmentData.id,
         assignmentData.title,
         assignmentData.course,
         assignmentData.due_date,
+        req.user.university_id || 'default',
         assignmentData.created_at
       ]);
       
@@ -115,8 +116,8 @@ router.post('/submit', authenticateToken, requireRole('student'), upload.single(
     await db.runAsync(`
       INSERT INTO submissions (
         id, assignment_id, student_id, file_path, file_hash, original_filename,
-        ai_usage_type, ai_token_count, blockchain_hash, timestamp, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ai_usage_type, ai_token_count, blockchain_hash, timestamp, university_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       submissionId,
       assignmentId,
@@ -128,6 +129,7 @@ router.post('/submit', authenticateToken, requireRole('student'), upload.single(
       parseInt(aiTokenCount) || 0,
       blockchainResult.hash,
       timestamp,
+      req.user.university_id || 'default',
       Date.now()
     ]);
 
@@ -163,12 +165,13 @@ router.post('/submit', authenticateToken, requireRole('student'), upload.single(
 // Get assignments
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    let query = 'SELECT * FROM assignments';
-    let params = [];
+    const univWhere = req.user.role === 'super_admin' ? '' : 'WHERE university_id = ?';
+    let query = `SELECT * FROM assignments ${univWhere}`;
+    let params = req.user.role === 'super_admin' ? [] : [req.user.university_id || 'default'];
     
     // Stream based filtering for students and faculty
     if (req.user.role !== 'admin' && req.user.role !== 'super_admin' && req.user.department) {
-      query += ' WHERE stream = ? OR stream IS NULL';
+      query += req.user.role === 'super_admin' ? ' WHERE stream = ? OR stream IS NULL' : ' AND (stream = ? OR stream IS NULL)';
       params.push(req.user.department);
     }
     
@@ -228,10 +231,10 @@ router.get('/faculty/submissions', authenticateToken, requireRole('faculty'), as
       FROM submissions s
       JOIN assignments a ON s.assignment_id = a.id
       JOIN users u ON s.student_id = u.id
-      WHERE 1=1
+      WHERE 1=1 ${req.user.role === 'super_admin' ? '' : 'AND s.university_id = ?'}
     `;
     
-    const params = [];
+    const params = req.user.role === 'super_admin' ? [] : [req.user.university_id || 'default'];
     
     // Stream-based isolation for faculty
     if (req.user.role === 'faculty' && req.user.department) {
@@ -338,9 +341,16 @@ router.get('/submissions/:submissionId', authenticateToken, async (req, res) => 
       return res.status(404).json({ success: false, error: 'Submission not found' });
     }
     
-    // Check if user has permission (student can only see their own, faculty can see all)
+    // Check if user has permission (student can only see their own, faculty can see all within their university)
     if (req.user.role === 'student' && submission.student_id !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    if (req.user.role !== 'super_admin' && submission.university_id !== req.user.university_id) {
+      // If the submission doesn't match the current user's university isolated instance, deny access
+      if (!(req.user.university_id === 'default' && (!submission.university_id || submission.university_id === 'default'))) {
+          return res.status(403).json({ success: false, error: 'Access denied: Submission from another university' });
+      }
     }
     
     res.json({ success: true, data: submission });
@@ -470,8 +480,9 @@ router.get('/dashboard', authenticateToken, requireRole('student'), async (req, 
         s.created_at as submitted_at
       FROM assignments a
       LEFT JOIN submissions s ON a.id = s.assignment_id AND s.student_id = ?
+      WHERE a.university_id = ?
       ORDER BY a.due_date DESC
-    `, [userId]);
+    `, [userId, req.user.university_id || 'default']);
 
     // Calculate stats
     const total = allAssignments.length;

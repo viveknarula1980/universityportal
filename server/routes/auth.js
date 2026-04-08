@@ -31,6 +31,10 @@ router.post('/register', [
     }
 
     const { email, password, name, role, studentId } = req.body;
+    const slug = req.headers['x-university-slug'] || req.body.slug || 'default';
+
+    const univInfo = await db.getAsync('SELECT id FROM university_settings WHERE slug = ?', [slug]);
+    const university_id = univInfo ? univInfo.id : 'default';
 
     // Check if user exists
     const existingUser = await db.getAsync('SELECT id FROM users WHERE email = ?', [email]);
@@ -54,8 +58,8 @@ router.post('/register', [
       const now = Date.now();
 
       await db.runAsync(`
-        INSERT INTO users (id, email, password_hash, name, role, student_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (id, email, password_hash, name, role, student_id, university_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         userId,
         defaultUser.email,
@@ -63,12 +67,13 @@ router.post('/register', [
         defaultUser.name,
         defaultUser.role,
         defaultUser.studentId || null,
+        university_id,
         now,
         now
       ]);
 
       const token = jwt.sign(
-        { userId, email: defaultUser.email, role: defaultUser.role },
+        { userId, email: defaultUser.email, role: defaultUser.role, university_id },
         process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: '7d' }
       );
@@ -93,13 +98,13 @@ router.post('/register', [
 
     // Insert user
     await db.runAsync(`
-      INSERT INTO users (id, email, password_hash, name, role, student_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [userId, email, passwordHash, name, role, studentId || null, now, now]);
+      INSERT INTO users (id, email, password_hash, name, role, student_id, university_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [userId, email, passwordHash, name, role, studentId || null, university_id, now, now]);
 
     // Generate token
     const token = jwt.sign(
-      { userId, email, role },
+      { userId, email, role, university_id },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
@@ -131,13 +136,21 @@ router.post('/login', [
     const { email: rawEmail, password } = req.body;
     const email = rawEmail ? rawEmail.toLowerCase() : '';
 
+    const slug = req.headers['x-university-slug'] || req.body.slug || 'default';
+
     // Find user
-    console.log(`🔍 Login attempt for: ${email}`);
-    const user = await db.getAsync('SELECT * FROM users WHERE email = ?', [email]);
+    console.log(`🔍 Login attempt for: ${email} on slug: ${slug}`);
+    const user = await db.getAsync('SELECT u.*, s.slug as user_slug FROM users u LEFT JOIN university_settings s ON u.university_id = s.id WHERE u.email = ?', [email]);
     if (!user) {
       console.log(`❌ User not found in DB: ${email}`);
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
+
+    if (user.role !== 'super_admin' && (user.user_slug !== slug && !(slug === 'default' && !user.user_slug))) {
+      console.log(`❌ Access denied: User belongs to ${user.user_slug}, tried logging into ${slug}`);
+      return res.status(403).json({ success: false, error: 'Access denied. You do not belong to this university portal.' });
+    }
+
     console.log(`✅ User found: ${user.id} (${user.role})`);
 
     // Verify password
@@ -191,7 +204,7 @@ router.post('/login', [
     // Direct Login (OTP disabled)
     // console.log('⚠️ Email service unavailable, issuing token directly');
     const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { userId: user.id, email: user.email, role: user.role, university_id: user.university_id },
         process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: '7d' }
     );
@@ -256,8 +269,10 @@ router.post('/google', async (req, res) => {
     const name = payload.name;
     const googleId = payload.sub;
 
+    const slug = req.headers['x-university-slug'] || req.body.slug || 'default';
+
     // Check if user exists
-    let user = await db.getAsync('SELECT * FROM users WHERE email = ?', [email]);
+    let user = await db.getAsync('SELECT u.*, s.slug as user_slug FROM users u LEFT JOIN university_settings s ON u.university_id = s.id WHERE u.email = ?', [email]);
     let userId;
 
     if (!user) {
@@ -266,6 +281,11 @@ router.post('/google', async (req, res) => {
         success: false, 
         error: 'No account found for this email. Please contact your administrator.' 
       });
+    }
+
+    if (user.role !== 'super_admin' && (user.user_slug !== slug && !(slug === 'default' && !user.user_slug))) {
+      console.log(`❌ Google Access denied: User belongs to ${user.user_slug}, tried logging into ${slug}`);
+      return res.status(403).json({ success: false, error: 'Access denied. You do not belong to this university portal.' });
     }
 
     userId = user.id;
@@ -278,7 +298,7 @@ router.post('/google', async (req, res) => {
 
     // Generate app token
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: user.role, university_id: user.university_id },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
@@ -393,7 +413,7 @@ router.post('/verify-otp', async (req, res) => {
 
     // Generate token
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: user.role, university_id: user.university_id },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );

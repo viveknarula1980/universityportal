@@ -8,6 +8,9 @@ const router = express.Router();
 // Get all AI limits
 router.get('/ai-limits', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
+    const whereClause = req.user.role === 'super_admin' ? '' : 'WHERE u.university_id = ?';
+    const params = req.user.role === 'super_admin' ? [] : [req.user.university_id || 'default'];
+
     const limits = await db.allAsync(`
       SELECT 
         al.*,
@@ -18,9 +21,10 @@ router.get('/ai-limits', authenticateToken, requireRole('admin'), async (req, re
       FROM ai_limits al
       JOIN users u ON al.user_id = u.id
       LEFT JOIN ai_usage au ON al.user_id = au.user_id AND al.semester = au.semester
+      ${whereClause}
       GROUP BY al.id, u.student_id, u.name, u.email
       ORDER BY al.updated_at DESC
-    `);
+    `, params);
 
     res.json({ success: true, data: limits });
   } catch (error) {
@@ -99,6 +103,11 @@ router.get('/audit-logs', authenticateToken, requireRole('admin'), async (req, r
   try {
     const { limit = 100, offset = 0 } = req.query;
 
+    const whereClause = req.user.role === 'super_admin' ? '' : 'WHERE u.university_id = ?';
+    const countWhereClause = req.user.role === 'super_admin' ? '' : 'WHERE user_id IN (SELECT id FROM users WHERE university_id = ?)';
+    const params = req.user.role === 'super_admin' ? [parseInt(limit), parseInt(offset)] : [req.user.university_id || 'default', parseInt(limit), parseInt(offset)];
+    const countParams = req.user.role === 'super_admin' ? [] : [req.user.university_id || 'default'];
+
     const logs = await db.allAsync(`
       SELECT 
         al.*,
@@ -107,11 +116,12 @@ router.get('/audit-logs', authenticateToken, requireRole('admin'), async (req, r
         u.role as user_role
       FROM audit_logs al
       LEFT JOIN users u ON al.user_id = u.id
+      ${whereClause}
       ORDER BY al.timestamp DESC
       LIMIT ? OFFSET ?
-    `, [parseInt(limit), parseInt(offset)]);
+    `, params);
 
-    const totalCount = await db.getAsync('SELECT COUNT(*) as count FROM audit_logs');
+    const totalCount = await db.getAsync(`SELECT COUNT(*) as count FROM audit_logs ${countWhereClause}`, countParams);
 
     res.json({ 
       success: true, 
@@ -127,17 +137,23 @@ router.get('/audit-logs', authenticateToken, requireRole('admin'), async (req, r
 // Get admin dashboard stats
 router.get('/stats', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
+    const univWhere = req.user.role === 'super_admin' ? '' : 'WHERE university_id = ?';
+    const univParams = req.user.role === 'super_admin' ? [] : [req.user.university_id || 'default'];
+    
     // Certificate stats
-    const totalCertificates = await db.getAsync('SELECT COUNT(*) as count FROM certificates');
+    const totalCertificates = await db.getAsync(`SELECT COUNT(*) as count FROM certificates ${univWhere}`, univParams);
     const activeCertificates = await db.getAsync(
-      'SELECT COUNT(*) as count FROM certificates WHERE revocation_status = 0'
+      `SELECT COUNT(*) as count FROM certificates WHERE revocation_status = 0 ${req.user.role === 'super_admin' ? '' : 'AND university_id = ?'}`,
+      univParams
     );
 
     // AI access stats
     const studentsWithAI = await db.getAsync(`
-      SELECT COUNT(DISTINCT user_id) as count 
-      FROM ai_limits
-    `);
+      SELECT COUNT(DISTINCT al.user_id) as count 
+      FROM ai_limits al
+      JOIN users u ON al.user_id = u.id
+      ${req.user.role === 'super_admin' ? '' : 'WHERE u.university_id = ?'}
+    `, univParams);
 
     // Blockchain records
     const blockchainRecords = await db.getAsync('SELECT COUNT(*) as count FROM blockchain_records');
@@ -160,12 +176,15 @@ router.get('/stats', authenticateToken, requireRole('admin'), async (req, res) =
 // Get all users (Admin only)
 router.get('/users', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
+    const univWhere = req.user.role === 'super_admin' ? '' : 'AND university_id = ?';
+    const univParams = req.user.role === 'super_admin' ? [] : [req.user.university_id || 'default'];
+
     const users = await db.allAsync(`
-      SELECT id, email, name, role, student_id, department, is_verified, created_at 
+      SELECT id, email, name, role, student_id, department, is_verified, created_at, university_id 
       FROM users 
-      WHERE role != 'admin'
+      WHERE role != 'admin' ${univWhere}
       ORDER BY created_at DESC
-    `);
+    `, univParams);
     res.json({ success: true, data: users });
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -193,9 +212,9 @@ router.post('/users', authenticateToken, requireRole('admin'), async (req, res) 
     const now = Date.now();
 
     await db.runAsync(`
-      INSERT INTO users (id, email, password_hash, name, role, student_id, department, is_verified, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [userId, email, passwordHash, name, role, studentId || null, department || null, 0, now, now]);
+      INSERT INTO users (id, email, password_hash, name, role, student_id, department, is_verified, created_at, updated_at, university_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [userId, email, passwordHash, name, role, studentId || null, department || null, 0, now, now, req.user.university_id || 'default']);
 
     // Log audit
     await db.runAsync(`
@@ -263,9 +282,9 @@ router.post('/users/bulk', authenticateToken, requireRole('admin'), async (req, 
         const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
         await db.runAsync(`
-          INSERT INTO users (id, email, password_hash, name, role, student_id, department, is_verified, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [userId, email, passwordHash, name, role, studentId || null, department || null, 0, now, now]);
+          INSERT INTO users (id, email, password_hash, name, role, student_id, department, is_verified, created_at, updated_at, university_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [userId, email, passwordHash, name, role, studentId || null, department || null, 0, now, now, req.user.university_id || 'default']);
 
         results.success++;
       }

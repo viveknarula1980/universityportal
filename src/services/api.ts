@@ -12,6 +12,11 @@ class ApiService {
     return localStorage.getItem("token");
   }
 
+  private getSlug(): string {
+    const match = window.location.pathname.match(/^\/p\/([^/]+)/);
+    return match ? match[1] : 'default';
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -19,6 +24,7 @@ class ApiService {
     const token = this.getToken();
     const headers: HeadersInit = {
       "Content-Type": "application/json",
+      "X-University-Slug": this.getSlug(),
       ...options.headers,
     };
 
@@ -78,6 +84,7 @@ class ApiService {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
+        "X-University-Slug": this.getSlug(),
       },
       body: formData,
     });
@@ -153,6 +160,7 @@ class ApiService {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          "X-University-Slug": this.getSlug(),
         },
         body: formData,
       });
@@ -195,6 +203,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/assignments/submissions/${submissionId}/download`, {
       headers: {
         Authorization: `Bearer ${token}`,
+        "X-University-Slug": this.getSlug(),
       },
     });
     
@@ -336,6 +345,7 @@ class ApiService {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
+        "X-University-Slug": this.getSlug(),
       },
       body: formData,
     });

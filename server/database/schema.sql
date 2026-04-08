@@ -31,7 +31,9 @@ CREATE TABLE IF NOT EXISTS assignments (
     course TEXT NOT NULL,
     stream TEXT,
     due_date INTEGER NOT NULL,
-    created_at INTEGER NOT NULL
+    university_id TEXT,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (university_id) REFERENCES university_settings(id)
 );
 
 -- Submissions Table
@@ -47,9 +49,11 @@ CREATE TABLE IF NOT EXISTS submissions (
     timestamp INTEGER NOT NULL,
     status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'graded', 'late')),
     grade TEXT,
+    university_id TEXT,
     created_at INTEGER NOT NULL,
     FOREIGN KEY (assignment_id) REFERENCES assignments(id),
-    FOREIGN KEY (student_id) REFERENCES users(id)
+    FOREIGN KEY (student_id) REFERENCES users(id),
+    FOREIGN KEY (university_id) REFERENCES university_settings(id)
 );
 
 -- Certificates Table
@@ -64,8 +68,10 @@ CREATE TABLE IF NOT EXISTS certificates (
     revocation_status INTEGER DEFAULT 0,
     university_signature TEXT,
     qr_code_url TEXT,
+    university_id TEXT,
     created_at INTEGER NOT NULL,
-    FOREIGN KEY (student_id) REFERENCES users(id)
+    FOREIGN KEY (student_id) REFERENCES users(id),
+    FOREIGN KEY (university_id) REFERENCES university_settings(id)
 );
 
 -- AI Usage Table
