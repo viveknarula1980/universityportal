@@ -24,7 +24,7 @@ export function SuperAdminSidebar() {
   const handleLogout = () => {
     const pathParts = location.pathname.split('/');
     const currentSlug = (pathParts[1] === 'p' && pathParts[2]) ? pathParts[2] : '';
-    const targetPath = currentSlug ? `/p/${currentSlug}/login` : '/login';
+    const targetPath = currentSlug ? `/p/${currentSlug}` : '/';
     logout();
     navigate(targetPath);
   };
