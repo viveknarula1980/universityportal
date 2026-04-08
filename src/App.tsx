@@ -140,10 +140,7 @@ const App = () => (
             <Route path="/p/:slug/login/faculty" element={<FacultyLogin />} />
             <Route path="/p/:slug/login/admin" element={<AdminLogin />} />
             
-            {/* Branded Dashboard Routes */}
-            <Route path="/p/:slug/student" element={<ProtectedRoute requiredRole="student"><Index /></ProtectedRoute>} />
-            <Route path="/p/:slug/faculty" element={<ProtectedRoute requiredRole="faculty"><FacultyDashboard /></ProtectedRoute>} />
-            <Route path="/p/:slug/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            {/* Branded Dashboard Routes are consolidated below */}
             
             <Route path="/login/student" element={<StudentLogin />} />
             <Route path="/login/faculty" element={<FacultyLogin />} />
@@ -152,90 +149,37 @@ const App = () => (
             <Route path="/verify/:certificateId" element={<Verification />} />
             
             {/* Student Routes */}
-            <Route
-              path="/student"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <Index />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/assignments"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <Assignments />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/ai-generator"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <AIGenerator />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/my-certificates"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <MyCertificates />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/blockchain"
-              element={
-                <ProtectedRoute>
-                  <Blockchain />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/student" element={<ProtectedRoute requiredRole="student"><Index /></ProtectedRoute>} />
+            <Route path="/p/:slug/student" element={<ProtectedRoute requiredRole="student"><Index /></ProtectedRoute>} />
+            
+            <Route path="/assignments" element={<ProtectedRoute requiredRole="student"><Assignments /></ProtectedRoute>} />
+            <Route path="/p/:slug/assignments" element={<ProtectedRoute requiredRole="student"><Assignments /></ProtectedRoute>} />
+            
+            <Route path="/ai-generator" element={<ProtectedRoute requiredRole="student"><AIGenerator /></ProtectedRoute>} />
+            <Route path="/p/:slug/ai-generator" element={<ProtectedRoute requiredRole="student"><AIGenerator /></ProtectedRoute>} />
+            
+            <Route path="/my-certificates" element={<ProtectedRoute requiredRole="student"><MyCertificates /></ProtectedRoute>} />
+            <Route path="/p/:slug/my-certificates" element={<ProtectedRoute requiredRole="student"><MyCertificates /></ProtectedRoute>} />
+            
+            <Route path="/blockchain" element={<ProtectedRoute><Blockchain /></ProtectedRoute>} />
+            <Route path="/p/:slug/blockchain" element={<ProtectedRoute><Blockchain /></ProtectedRoute>} />
+            
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/p/:slug/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             
             {/* Faculty Routes */}
-            <Route
-              path="/faculty"
-              element={
-                <ProtectedRoute requiredRole="faculty">
-                  <FacultyDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/faculty/submissions"
-              element={
-                <ProtectedRoute requiredRole="faculty">
-                  <FacultyDashboard />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/faculty" element={<ProtectedRoute requiredRole="faculty"><FacultyDashboard /></ProtectedRoute>} />
+            <Route path="/p/:slug/faculty" element={<ProtectedRoute requiredRole="faculty"><FacultyDashboard /></ProtectedRoute>} />
+            
+            <Route path="/faculty/submissions" element={<ProtectedRoute requiredRole="faculty"><FacultyDashboard /></ProtectedRoute>} />
+            <Route path="/p/:slug/faculty/submissions" element={<ProtectedRoute requiredRole="faculty"><FacultyDashboard /></ProtectedRoute>} />
             
             {/* Admin Routes */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/certificate-issuance"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <CertificateIssuance />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/p/:slug/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            
+            <Route path="/certificate-issuance" element={<ProtectedRoute requiredRole="admin"><CertificateIssuance /></ProtectedRoute>} />
+            <Route path="/p/:slug/certificate-issuance" element={<ProtectedRoute requiredRole="admin"><CertificateIssuance /></ProtectedRoute>} />
             
             {/* Super Admin Routes */}
             <Route
