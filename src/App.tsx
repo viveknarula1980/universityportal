@@ -74,10 +74,19 @@ function BrandingProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(urlRequest);
         const data = await res.json();
         
+        // Always clear previous branding to prevent cross-instance leaking
+        localStorage.removeItem('university_name');
+        localStorage.removeItem('primary_color');
+        localStorage.removeItem('logo_url');
+        localStorage.removeItem('university_slug');
+        document.documentElement.style.removeProperty('--primary');
+
         if (data.success && data.data) {
           if (data.data.university_name) {
             document.title = data.data.university_name;
             localStorage.setItem('university_name', data.data.university_name);
+          } else {
+            document.title = 'EduChain';
           }
           if (data.data.primary_color) {
             const hsl = hexToHSL(data.data.primary_color);
@@ -94,6 +103,8 @@ function BrandingProvider({ children }: { children: React.ReactNode }) {
           if (data.data.slug) {
             localStorage.setItem('university_slug', data.data.slug);
           }
+        } else {
+          document.title = 'EduChain';
         }
       } catch (err) { }
     };
