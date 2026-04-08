@@ -117,9 +117,9 @@ export default function SuperAdminDashboard() {
   };
 
   const copyUrl = (slug: string) => {
-    const url = `${window.location.origin}/p/${slug}/login`;
+    const url = `${window.location.origin}/p/${slug}`;
     navigator.clipboard.writeText(url);
-    toast({ title: "URL Copied", description: "Login URL copied to clipboard." });
+    toast({ title: "URL Copied", description: "University URL copied to clipboard." });
   };
 
   return (
@@ -198,7 +198,7 @@ export default function SuperAdminDashboard() {
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyUrl(inst.slug)}>
                               <Copy className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => window.open(`/p/${inst.slug}/login`, '_blank')}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => window.open(`/p/${inst.slug}`, '_blank')}>
                               <ExternalLink className="w-4 h-4" />
                             </Button>
                           </div>

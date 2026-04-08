@@ -91,7 +91,11 @@ export default function Landing() {
             <div className="relative group cursor-pointer">
               <div className="absolute inset-0 bg-primary opacity-50 blur-lg rounded-full group-hover:opacity-100 transition-opacity duration-500" />
               <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300">
-                <BookOpen className="w-6 h-6 text-white" />
+                {logoUrl ? (
+                  <img src={logoUrl} alt={universityName} className="w-8 h-8 object-contain filter brightness-0 invert" />
+                ) : (
+                  <BookOpen className="w-6 h-6 text-white" />
+                )}
               </div>
             </div>
             <div>
@@ -308,7 +312,11 @@ export default function Landing() {
       <footer className="relative z-10 border-t border-white/5 py-12 bg-zinc-950">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
            <div className="flex items-center gap-2 text-zinc-500">
-              <BookOpen className="w-5 h-5" />
+              {logoUrl ? (
+                <img src={logoUrl} alt={universityName} className="w-6 h-6 object-contain" />
+              ) : (
+                <BookOpen className="w-5 h-5" />
+              )}
               <span className="font-display font-bold text-white">{universityName}</span>
            </div>
            <p className="text-zinc-500 text-sm">© 2026 EduChain University. Blockchain Secured.</p>
