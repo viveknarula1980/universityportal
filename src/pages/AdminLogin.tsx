@@ -57,9 +57,10 @@ export default function AdminLogin() {
         if (user.role !== "admin") {
            toast({
               title: "Access Denied",
-              description: "This portal is for administrators only.",
+              description: "This portal is for administrators only. Your account is registered as " + user.role,
               variant: "destructive",
            });
+           logout();
            return;
         }
         proceedToDashboard(user);
@@ -99,11 +100,7 @@ export default function AdminLogin() {
   };
 
   const proceedToDashboard = (user: User) => {
-    if (user.role === "admin") {
-      navigate(`${basePath}/admin`);
-    } else {
-      navigate(`${basePath || '/'}`);
-    }
+    navigate(`${basePath}/admin`);
   };
 
   return (

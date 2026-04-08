@@ -56,12 +56,13 @@ export default function FacultyLogin() {
         await handleInitialLoginSuccess(email);
       } else {
         const user = JSON.parse(localStorage.getItem("user") || "{}");
-        if (user.role !== "faculty" && user.role !== "admin") {
+        if (user.role !== "faculty") {
            toast({
               title: "Access Denied",
-              description: "This portal is for faculty members only.",
+              description: "This portal is for faculty only. Your account is registered as " + user.role,
               variant: "destructive",
            });
+           logout();
            return;
         }
         proceedToDashboard(user);
@@ -120,13 +121,7 @@ export default function FacultyLogin() {
   };
 
   const proceedToDashboard = (user: User) => {
-    if (user.role === "faculty") {
-      navigate(`${basePath}/faculty`);
-    } else if (user.role === "admin") {
-       navigate(`${basePath}/admin`);
-    } else {
-      navigate(`${basePath || '/'}`);
-    }
+    navigate(`${basePath}/faculty`);
   };
 
   return (

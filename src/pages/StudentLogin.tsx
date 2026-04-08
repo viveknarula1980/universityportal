@@ -55,12 +55,13 @@ export default function StudentLogin() {
         await handleInitialLoginSuccess(email);
       } else {
         const user = JSON.parse(localStorage.getItem("user") || "{}");
-        if (user.role !== "student" && user.role !== "admin") {
+        if (user.role !== "student") {
            toast({
               title: "Access Denied",
-              description: "This portal is for students only.",
+              description: "This portal is for students only. Your account is registered as " + user.role,
               variant: "destructive",
            });
+           logout(); // Log them out immediately
            return;
         }
         proceedToDashboard(user);
@@ -119,13 +120,7 @@ export default function StudentLogin() {
   };
 
   const proceedToDashboard = (user: User) => {
-    if (user.role === "student") {
-      navigate(`${basePath}/student`);
-    } else if (user.role === "admin") {
-       navigate(`${basePath}/admin`);
-    } else {
-      navigate(`${basePath || '/'}`);
-    }
+    navigate(`${basePath}/student`);
   };
 
   return (
