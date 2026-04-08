@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 import db from '../database/db.js';
 import bcrypt from 'bcryptjs';
+import { upload } from '../services/storage.js';
 
 const router = express.Router();
 
@@ -102,6 +103,36 @@ router.put('/branding', authenticateToken, requireRole('super_admin'), async (re
   } catch (error) {
     console.error('Error updating branding:', error);
     res.status(500).json({ success: false, error: 'Failed to update branding' });
+  }
+});
+
+// Upload a logo
+router.post('/upload-logo', authenticateToken, requireRole('super_admin'), upload.single('logo'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    // Handle Cloudinary vs Local
+    let fileUrl = req.file.path;
+    
+    // If it's local storage, we want to store the path relative to the server root
+    // multer-storage-cloudinary usually gives the full secure_url in req.file.path or req.file.secure_url
+    if (req.file.path && !req.file.path.startsWith('http')) {
+      // It's local, ensure it starts with /uploads/
+      const filename = req.file.filename;
+      fileUrl = `/uploads/${filename}`;
+    } else if (req.file.secure_url) {
+      fileUrl = req.file.secure_url;
+    }
+
+    res.json({ 
+      success: true, 
+      data: { url: fileUrl } 
+    });
+  } catch (error) {
+    console.error('Error uploading logo:', error);
+    res.status(500).json({ success: false, error: 'Failed to upload logo' });
   }
 });
 

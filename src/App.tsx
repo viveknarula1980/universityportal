@@ -85,7 +85,11 @@ function BrandingProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem('primary_color', data.data.primary_color);
           }
           if (data.data.logo_url) {
-            localStorage.setItem('logo_url', data.data.logo_url);
+            let fullLogoUrl = data.data.logo_url;
+            if (fullLogoUrl.startsWith('/uploads')) {
+              fullLogoUrl = `${API_URL.replace('/api', '')}${fullLogoUrl}`;
+            }
+            localStorage.setItem('logo_url', fullLogoUrl);
           }
           if (data.data.slug) {
             localStorage.setItem('university_slug', data.data.slug);

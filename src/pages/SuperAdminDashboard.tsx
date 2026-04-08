@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Settings, Palette, Users, Globe, ExternalLink, ShieldCheck, Copy } from "lucide-react";
+import { Plus, Settings, Palette, Users, Globe, ExternalLink, ShieldCheck, Copy, Upload } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UniversityInstance {
@@ -35,6 +35,7 @@ export default function SuperAdminDashboard() {
   const [brandColor, setBrandColor] = useState("");
   const [brandLogo, setBrandLogo] = useState("");
   const [isSavingBrand, setIsSavingBrand] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [instances, setInstances] = useState<UniversityInstance[]>([]);
   const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
@@ -66,6 +67,32 @@ export default function SuperAdminDashboard() {
     fetchInstances();
     fetchGlobalBranding();
   }, []);
+
+  const handleLogoUpload = async (file: File, type: 'instance' | 'global') => {
+    if (!file) return;
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    try {
+      const res = await fetch(`${API_URL}/superadmin/upload-logo`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (type === 'instance') setInstLogo(data.data.url);
+        else setBrandLogo(data.data.url);
+        toast({ title: "Logo Uploaded", description: "The logo has been staged for saving." });
+      } else {
+        toast({ title: "Upload Failed", description: data.error, variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to upload logo", variant: "destructive" });
+    }
+    setIsUploading(false);
+  };
 
   const handleCreateInstance = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +196,31 @@ export default function SuperAdminDashboard() {
                       <Label>Primary Color</Label>
                       <Input type="color" className="h-10 p-1" value={instColor} onChange={e => setInstColor(e.target.value)} />
                     </div>
+                    <div className="space-y-2">
+                      <Label>University Logo</Label>
+                      <div className="flex gap-3 items-center">
+                        <div className="w-12 h-12 rounded-lg border bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
+                          {instLogo ? (
+                             <img src={instLogo.startsWith('http') ? instLogo : `${API_URL.replace('/api', '')}${instLogo}`} className="w-full h-full object-contain" />
+                          ) : (
+                            <Upload className="w-5 h-5 text-zinc-400" />
+                          )}
+                        </div>
+                        <Input 
+                          type="file" 
+                          accept="image/*" 
+                          className="text-xs" 
+                          onChange={e => e.target.files?.[0] && handleLogoUpload(e.target.files[0], 'instance')} 
+                          disabled={isUploading}
+                        />
+                      </div>
+                      <Input 
+                        placeholder="Or enter URL directly" 
+                        value={instLogo} 
+                        onChange={e => setInstLogo(e.target.value)} 
+                        className="mt-2 text-xs"
+                      />
+                    </div>
                     <div className="space-y-2 border-t pt-4 mt-4">
                       <Label className="text-primary font-bold">Admin Credentials</Label>
                       <Input placeholder="admin@oxford.edu" type="email" value={instAdminEmail} onChange={e => setInstAdminEmail(e.target.value)} required />
@@ -192,7 +244,14 @@ export default function SuperAdminDashboard() {
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <div className="w-10 h-10 rounded-lg border flex items-center justify-center bg-zinc-50 dark:bg-zinc-900" style={{ borderColor: inst.primary_color + '40' }}>
-                            {inst.logo_url ? <img src={inst.logo_url} className="w-6 h-6 object-contain" /> : <Globe className="w-5 h-5 text-zinc-400" />}
+                            {inst.logo_url ? (
+                              <img 
+                                src={inst.logo_url.startsWith('http') ? inst.logo_url : `${API_URL.replace('/api', '')}${inst.logo_url}`} 
+                                className="w-6 h-6 object-contain" 
+                              />
+                            ) : (
+                              <Globe className="w-5 h-5 text-zinc-400" />
+                            )}
                           </div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyUrl(inst.slug)}>
@@ -236,8 +295,40 @@ export default function SuperAdminDashboard() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Logo URL</Label>
-                    <Input value={brandLogo} onChange={e => setBrandLogo(e.target.value)} placeholder="https://..." />
+                    <Label>Logo</Label>
+                    <div className="flex gap-4 items-center mb-2">
+                       <div className="w-16 h-16 rounded-xl border bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center overflow-hidden p-2">
+                          {brandLogo ? (
+                            <img src={brandLogo.startsWith('http') ? brandLogo : `${API_URL.replace('/api', '')}${brandLogo}`} className="w-full h-full object-contain" />
+                          ) : (
+                            <Palette className="w-8 h-8 text-zinc-300" />
+                          )}
+                       </div>
+                       <div className="flex-1 space-y-2">
+                         <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="w-full gap-2 text-xs" 
+                          onClick={() => document.getElementById('global-logo-upload')?.click()}
+                          disabled={isUploading}
+                         >
+                           <Upload className="w-4 h-4" /> {isUploading ? "Uploading..." : "Upload Logo"}
+                         </Button>
+                         <input 
+                          id="global-logo-upload" 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={e => e.target.files?.[0] && handleLogoUpload(e.target.files[0], 'global')} 
+                         />
+                         <Input 
+                           value={brandLogo} 
+                           onChange={e => setBrandLogo(e.target.value)} 
+                           placeholder="Or paste external URL"
+                           className="text-xs"
+                         />
+                       </div>
+                    </div>
                   </div>
                   <Button type="submit" disabled={isSavingBrand} className="w-full mt-2">
                     {isSavingBrand ? "Saving..." : "Apply Global Branding"}
