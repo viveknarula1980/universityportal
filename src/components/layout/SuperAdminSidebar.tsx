@@ -21,9 +21,12 @@ export function SuperAdminSidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  // Extract base path for dynamic navigation
+  const pathParts = location.pathname.split('/');
+  const currentSlug = (pathParts[1] === 'p' && pathParts[2]) ? pathParts[2] : (localStorage.getItem('university_slug') || '');
+  const basePath = currentSlug ? `/p/${currentSlug}` : '';
+
   const handleLogout = () => {
-    const pathParts = location.pathname.split('/');
-    const currentSlug = (pathParts[1] === 'p' && pathParts[2]) ? pathParts[2] : '';
     const targetPath = currentSlug ? `/p/${currentSlug}` : '/';
     logout();
     navigate(targetPath);
@@ -60,11 +63,15 @@ export function SuperAdminSidebar() {
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          let itemPath = item.path;
+          if (!item.path.startsWith('http')) {
+            itemPath = `${basePath}${item.path}`;
+          }
+          const isActive = location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`);
           return (
             <Link
               key={item.path}
-              to={item.path}
+              to={itemPath}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
                 isActive 
