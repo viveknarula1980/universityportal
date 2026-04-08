@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -212,7 +213,6 @@ class BlockchainService {
 
   generateDeterministicHash(dataHash) {
     // Generate a deterministic hash for development/testing
-    const crypto = require('crypto');
     const hash = crypto.createHash('sha256')
       .update(dataHash + Date.now().toString())
       .digest('hex');
