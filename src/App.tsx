@@ -119,10 +119,16 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             
             {/* Branded Entry Points */}
+            <Route path="/p/:slug" element={<Landing />} />
             <Route path="/p/:slug/login" element={<Login />} />
             <Route path="/p/:slug/login/student" element={<StudentLogin />} />
             <Route path="/p/:slug/login/faculty" element={<FacultyLogin />} />
             <Route path="/p/:slug/login/admin" element={<AdminLogin />} />
+            
+            {/* Branded Dashboard Routes */}
+            <Route path="/p/:slug/student" element={<ProtectedRoute requiredRole="student"><Index /></ProtectedRoute>} />
+            <Route path="/p/:slug/faculty" element={<ProtectedRoute requiredRole="faculty"><FacultyDashboard /></ProtectedRoute>} />
+            <Route path="/p/:slug/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
             
             <Route path="/login/student" element={<StudentLogin />} />
             <Route path="/login/faculty" element={<FacultyLogin />} />

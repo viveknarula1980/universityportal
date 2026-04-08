@@ -24,10 +24,9 @@ router.get('/instances', authenticateToken, requireRole('super_admin'), async (r
 // Create a new university instance + admin demo account
 router.post('/instances', authenticateToken, requireRole('super_admin'), async (req, res) => {
   try {
-    const { universityName, name, slug, primaryColor, logoUrl, adminEmail, adminPassword, adminName } = req.body;
-    const finalUniversityName = universityName || name;
+    const { universityName, slug, primaryColor, logoUrl, adminEmail, adminPassword, adminName } = req.body;
 
-    if (!finalUniversityName || !slug || !adminEmail || !adminPassword) {
+    if (!universityName || !slug || !adminEmail || !adminPassword) {
       return res.status(400).json({ success: false, error: 'Required fields missing' });
     }
 
@@ -40,12 +39,12 @@ router.post('/instances', authenticateToken, requireRole('super_admin'), async (
 
     const now = Date.now();
     const universityId = `univ-${now}-${Math.random().toString(36).substr(2, 5)}`;
-    
+
     // Create settings
     await db.runAsync(`
       INSERT INTO university_settings (id, slug, university_name, primary_color, logo_url, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
-    `, [universityId, slug, finalUniversityName, primaryColor || '#06b6d4', logoUrl || '', now]);
+    `, [universityId, slug, universityName, primaryColor || '#06b6d4', logoUrl || '', now]);
 
     // Create admin user
     const passwordHash = await bcrypt.hash(adminPassword, 10);
@@ -53,10 +52,10 @@ router.post('/instances', authenticateToken, requireRole('super_admin'), async (
     await db.runAsync(`
       INSERT INTO users (id, email, password_hash, name, role, is_verified, university_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [userId, adminEmail, passwordHash, adminName || finalUniversityName + ' Admin', 'admin', 1, universityId, now, now]);
+    `, [userId, adminEmail, passwordHash, adminName || universityName + ' Admin', 'admin', 1, universityId, now, now]);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Demo instance created successfully',
       data: { universityId, slug, loginUrl: `/p/${slug}/login` }
     });
@@ -71,16 +70,16 @@ router.get('/branding', async (req, res) => {
   try {
     const { slug } = req.query;
     let settings;
-    
+
     if (slug) {
       settings = await db.getAsync("SELECT university_name, primary_color, logo_url, slug FROM university_settings WHERE slug = ?", [slug]);
     }
-    
+
     // Fallback to default if slug not found or not provided
     if (!settings) {
       settings = await db.getAsync("SELECT university_name, primary_color, logo_url, slug FROM university_settings WHERE id = 'default'");
     }
-    
+
     res.json({ success: true, data: settings || {} });
   } catch (error) {
     console.error('Error fetching branding:', error);
@@ -93,7 +92,7 @@ router.put('/branding', authenticateToken, requireRole('super_admin'), async (re
   try {
     const { id, universityName, primaryColor, logoUrl, slug } = req.body;
     const targetId = id || 'default';
-    
+
     await db.runAsync(`
       UPDATE university_settings 
       SET university_name = ?, primary_color = ?, logo_url = ?, slug = ?, updated_at = ?

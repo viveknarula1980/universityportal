@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   GraduationCap,
@@ -51,6 +51,12 @@ const roles = [
 export default function Landing() {
   const { isAuthenticated, user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { slug } = useParams();
+  const basePath = slug ? `/p/${slug}` : '';
+
+  // Read branding from localStorage (set by BrandingProvider in App.tsx)
+  const universityName = slug ? (localStorage.getItem('university_name') || 'University Portal') : 'EduChain';
+  const logoUrl = localStorage.getItem('logo_url') || '';
 
   if (isLoading) {
     return (
@@ -61,9 +67,9 @@ export default function Landing() {
   }
 
   if (isAuthenticated && user && user.isVerified) {
-    if (user.role === "student") navigate("/student");
-    else if (user.role === "faculty") navigate("/faculty");
-    else if (user.role === "admin") navigate("/admin");
+    if (user.role === "student") navigate(`${basePath}/student`);
+    else if (user.role === "faculty") navigate(`${basePath}/faculty`);
+    else if (user.role === "admin") navigate(`${basePath}/admin`);
     return null;
   }
 
@@ -89,7 +95,7 @@ export default function Landing() {
               </div>
             </div>
             <div>
-              <h1 className="font-display font-bold text-2xl tracking-tight text-white">EduChain</h1>
+              <h1 className="font-display font-bold text-2xl tracking-tight text-white">{universityName}</h1>
               <p className="text-[10px] uppercase tracking-wider text-primary font-semibold">University Portal</p>
             </div>
           </div>
@@ -97,13 +103,13 @@ export default function Landing() {
              <Button 
               variant="ghost" 
               className="hidden md:flex text-zinc-300 hover:text-white hover:bg-white/5 rounded-full px-6"
-              onClick={() => navigate("/verify")}
+              onClick={() => navigate(`${basePath}/verify`)}
             >
               Verify Certificate
             </Button>
             <Button 
               className="bg-white text-zinc-950 hover:bg-zinc-200 rounded-full px-8 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-all duration-300"
-              onClick={() => navigate("/login/student")}
+              onClick={() => navigate(`${basePath}/login/student`)}
             >
               Portal Login
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -139,7 +145,7 @@ export default function Landing() {
                 <Button 
                   size="lg" 
                   className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white rounded-full px-8 h-14 text-lg shadow-[0_0_40px_rgba(var(--primary),0.4)] w-full sm:w-auto"
-                  onClick={() => navigate("/login/student")}
+                  onClick={() => navigate(`${basePath}/login/student`)}
                 >
                   Access Portal
                   <ChevronRight className="w-5 h-5 ml-2" />
@@ -148,7 +154,7 @@ export default function Landing() {
                   size="lg" 
                   variant="outline" 
                   className="border-white/10 bg-white/5 text-white hover:bg-white/10 rounded-full px-8 h-14 text-lg backdrop-blur-md w-full sm:w-auto"
-                  onClick={() => navigate("/verify")}
+                  onClick={() => navigate(`${basePath}/verify`)}
                 >
                   <Shield className="w-5 h-5 mr-2 text-success" />
                   Verify a Degree
@@ -249,7 +255,7 @@ export default function Landing() {
               return (
                 <div 
                   key={role.id}
-                  onClick={() => navigate("/login/" + role.id)}
+                  onClick={() => navigate(`${basePath}/login/` + role.id)}
                   className="group relative p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300 cursor-pointer overflow-hidden"
                 >
                   {/* Hover gradient background */}
@@ -290,7 +296,7 @@ export default function Landing() {
                <Button 
                   size="lg" 
                   className="bg-white text-zinc-950 hover:bg-zinc-200 rounded-full px-10 h-16 text-lg tracking-wide font-medium shadow-[0_0_30px_rgba(255,255,255,0.15)] transition-all hover:scale-105"
-                  onClick={() => navigate("/verify")}
+                  onClick={() => navigate(`${basePath}/verify`)}
                 >
                   Verify Now <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
@@ -303,7 +309,7 @@ export default function Landing() {
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
            <div className="flex items-center gap-2 text-zinc-500">
               <BookOpen className="w-5 h-5" />
-              <span className="font-display font-bold text-white">EduChain</span>
+              <span className="font-display font-bold text-white">{universityName}</span>
            </div>
            <p className="text-zinc-500 text-sm">© 2026 EduChain University. Blockchain Secured.</p>
            <div className="flex gap-6 text-sm text-zinc-500">

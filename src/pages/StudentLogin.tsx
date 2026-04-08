@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { LogIn, Mail, Lock, GraduationCap, Sparkles, CheckCircle2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ export default function StudentLogin() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, login, loginWithGoogle, sendOTP, verifyOTP, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
+  const { slug } = useParams();
+  const basePath = slug ? `/p/${slug}` : '';
   const { toast } = useToast();
 
   const [authStep, setAuthStep] = useState<"login" | "otp">("login");
@@ -118,11 +120,11 @@ export default function StudentLogin() {
 
   const proceedToDashboard = (user: User) => {
     if (user.role === "student") {
-      navigate("/student");
+      navigate(`${basePath}/student`);
     } else if (user.role === "admin") {
-       navigate("/admin");
+       navigate(`${basePath}/admin`);
     } else {
-      navigate("/");
+      navigate(`${basePath || '/'}`);
     }
   };
 
@@ -135,7 +137,7 @@ export default function StudentLogin() {
         
         <div className="relative z-10">
           <button 
-            onClick={() => navigate("/")}
+            onClick={() => navigate(`${basePath || '/'}`)}
             className="flex items-center gap-2 text-blue-200 hover:text-white transition-colors mb-12 group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -300,7 +302,7 @@ export default function StudentLogin() {
             
             <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800 text-center">
                <p className="text-xs text-muted-foreground">
-                 Not a student? <button onClick={() => navigate("/")} className="text-blue-600 hover:underline">Choose another portal</button>
+                 Not a student? <button onClick={() => navigate(`${basePath || '/'}`)} className="text-blue-600 hover:underline">Choose another portal</button>
                </p>
             </div>
           </div>

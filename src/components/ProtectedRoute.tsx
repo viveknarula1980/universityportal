@@ -11,6 +11,11 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   const { isAuthenticated, user, isLoading } = useAuth();
   const location = useLocation();
 
+  // Detect if we are on a branded path like /p/:slug/...
+  const pathParts = location.pathname.split('/');
+  const slug = (pathParts[1] === 'p' && pathParts[2]) ? pathParts[2] : '';
+  const loginPath = slug ? `/p/${slug}/login` : '/login';
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -23,19 +28,20 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   }
 
   if (!isAuthenticated || (user && !user.isVerified)) {
-    return <Navigate to="/login" state={{ from: location, needsOtp: !user?.isVerified }} replace />;
+    return <Navigate to={loginPath} state={{ from: location, needsOtp: !user?.isVerified }} replace />;
   }
 
   if (requiredRole && user?.role !== requiredRole) {
+    const base = slug ? `/p/${slug}` : '';
     // Redirect to appropriate portal based on user role
     if (user?.role === "student") {
-      return <Navigate to="/student" replace />;
+      return <Navigate to={`${base}/student`} replace />;
     } else if (user?.role === "faculty") {
-      return <Navigate to="/faculty" replace />;
+      return <Navigate to={`${base}/faculty`} replace />;
     } else if (user?.role === "admin") {
-      return <Navigate to="/admin" replace />;
+      return <Navigate to={`${base}/admin`} replace />;
     }
-    return <Navigate to="/" replace />;
+    return <Navigate to={base || "/"} replace />;
   }
 
   return <>{children}</>;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { LogIn, Mail, Lock, GraduationCap, Users, Settings, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, login, loginWithGoogle, sendOTP, verifyOTP, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
+  const { slug } = useParams();
+  const basePath = slug ? `/p/${slug}` : '';
   const { toast } = useToast();
 
   const [authStep, setAuthStep] = useState<"login" | "otp">("login");
@@ -122,27 +124,27 @@ export default function Login() {
 
   const proceedToDashboard = (user: User) => {
     if (user.role === "student") {
-      navigate("/student");
+      navigate(`${basePath}/student`);
     } else if (user.role === "faculty") {
-      navigate("/faculty");
+      navigate(`${basePath}/faculty`);
     } else if (user.role === "admin") {
-      navigate("/admin");
+      navigate(`${basePath}/admin`);
     } else if (user.role === "super_admin") {
       navigate("/superadmin");
     } else {
-      navigate("/");
+      navigate(`${basePath || '/'}`);
     }
   };
 
-  const quickLogin = (role: "student" | "faculty" | "admin" | "super_admin") => {
-    const credentials: Record<string, { email: string; password: string }> = {
+    const quickLogin = (role: "student" | "faculty" | "admin" | "super_admin") => {
+    const defaultCreds: Record<string, { email: string; password: string }> = {
       student: { email: "student@university.edu", password: "student123" },
       faculty: { email: "faculty@university.edu", password: "faculty123" },
       admin: { email: "admin@university.edu", password: "admin123" },
       super_admin: { email: "superadmin@university.edu", password: "superadmin123" },
     };
 
-    const creds = credentials[role];
+    const creds = defaultCreds[role];
     setEmail(creds.email);
     setPassword(creds.password);
   };
@@ -325,7 +327,7 @@ export default function Login() {
             {/* Quick Login (Development Only) */}
             <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-4 text-center">Demo Accounts</p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className={`grid ${slug ? 'grid-cols-3' : 'grid-cols-3'} gap-3`}>
                 <Button
                   type="button"
                   variant="outline"

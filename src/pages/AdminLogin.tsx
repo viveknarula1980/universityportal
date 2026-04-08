@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { LogIn, Mail, Lock, Settings, Sparkles, CheckCircle2, ArrowLeft, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ export default function AdminLogin() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, login, sendOTP, verifyOTP, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
+  const { slug } = useParams();
+  const basePath = slug ? `/p/${slug}` : '';
   const { toast } = useToast();
 
   const [authStep, setAuthStep] = useState<"login" | "otp">("login");
@@ -98,9 +100,9 @@ export default function AdminLogin() {
 
   const proceedToDashboard = (user: User) => {
     if (user.role === "admin") {
-      navigate("/admin");
+      navigate(`${basePath}/admin`);
     } else {
-      navigate("/");
+      navigate(`${basePath || '/'}`);
     }
   };
 
@@ -113,7 +115,7 @@ export default function AdminLogin() {
         
         <div className="relative z-10">
           <button 
-            onClick={() => navigate("/")}
+            onClick={() => navigate(`${basePath || '/'}`)}
             className="flex items-center gap-2 text-amber-200 hover:text-white transition-colors mb-12 group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -257,7 +259,7 @@ export default function AdminLogin() {
                <p className="text-xs text-muted-foreground">
                  Unauthorized access attempt is logged and reported.
                </p>
-               <button onClick={() => navigate("/")} className="mt-4 text-xs text-amber-600 hover:underline">Return to Home</button>
+               <button onClick={() => navigate(`${basePath || '/'}`)} className="mt-4 text-xs text-amber-600 hover:underline">Return to Home</button>
             </div>
           </div>
         </div>

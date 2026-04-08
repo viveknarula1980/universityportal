@@ -20,7 +20,7 @@ interface UniversityInstance {
 
 export default function SuperAdminDashboard() {
   const { toast } = useToast();
-  
+
   // Instance Creation State
   const [instName, setInstName] = useState("");
   const [instSlug, setInstSlug] = useState("");
@@ -75,7 +75,7 @@ export default function SuperAdminDashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({
-          name: instName,
+          universityName: instName,
           slug: instSlug.toLowerCase().replace(/[^a-z0-9]/g, "-"),
           primaryColor: instColor,
           logoUrl: instLogo,
@@ -166,13 +166,8 @@ export default function SuperAdminDashboard() {
                       <Input placeholder="oxford" value={instSlug} onChange={e => setInstSlug(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
-                      <Label>Logo URL</Label>
-                      <div className="flex gap-3 items-center">
-                        <Input placeholder="https://..." value={instLogo} onChange={e => setInstLogo(e.target.value)} className="flex-1" />
-                        <div className="w-12 h-12 rounded border border-zinc-200 flex items-center justify-center bg-zinc-50 overflow-hidden shrink-0">
-                          {instLogo ? <img src={instLogo} className="w-full h-full object-contain" /> : <Palette className="w-4 h-4 text-zinc-300" />}
-                        </div>
-                      </div>
+                      <Label>Primary Color</Label>
+                      <Input type="color" className="h-10 p-1" value={instColor} onChange={e => setInstColor(e.target.value)} />
                     </div>
                     <div className="space-y-2 border-t pt-4 mt-4">
                       <Label className="text-primary font-bold">Admin Credentials</Label>
@@ -200,12 +195,12 @@ export default function SuperAdminDashboard() {
                             {inst.logo_url ? <img src={inst.logo_url} className="w-6 h-6 object-contain" /> : <Globe className="w-5 h-5 text-zinc-400" />}
                           </div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyUrl(inst.slug)}>
-                                <Copy className="w-4 h-4" />
-                             </Button>
-                             <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => window.open(`/p/${inst.slug}/login`, '_blank')}>
-                                <ExternalLink className="w-4 h-4" />
-                             </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyUrl(inst.slug)}>
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => window.open(`/p/${inst.slug}/login`, '_blank')}>
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
                         <CardTitle className="text-base mt-3">{inst.university_name}</CardTitle>
@@ -219,37 +214,37 @@ export default function SuperAdminDashboard() {
           </TabsContent>
 
           <TabsContent value="branding">
-             <Card className="max-w-2xl border-zinc-200 dark:border-zinc-800">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Palette className="w-5 h-5 text-accent" />
-                    Global Branding Override
-                  </CardTitle>
-                  <CardDescription>Configure branding for the default root domain.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSaveBranding} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Default University Name</Label>
-                      <Input value={brandName} onChange={e => setBrandName(e.target.value)} required />
+            <Card className="max-w-2xl border-zinc-200 dark:border-zinc-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="w-5 h-5 text-accent" />
+                  Global Branding Override
+                </CardTitle>
+                <CardDescription>Configure branding for the default root domain.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSaveBranding} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Default University Name</Label>
+                    <Input value={brandName} onChange={e => setBrandName(e.target.value)} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Primary Color (Hex)</Label>
+                    <div className="flex gap-2">
+                      <Input value={brandColor} onChange={e => setBrandColor(e.target.value)} required />
+                      <div className="w-10 h-10 rounded border border-zinc-200" style={{ backgroundColor: brandColor }}></div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Primary Color (Hex)</Label>
-                      <div className="flex gap-2">
-                        <Input value={brandColor} onChange={e => setBrandColor(e.target.value)} required />
-                        <div className="w-10 h-10 rounded border border-zinc-200" style={{ backgroundColor: brandColor }}></div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Logo URL</Label>
-                      <Input value={brandLogo} onChange={e => setBrandLogo(e.target.value)} placeholder="https://..." />
-                    </div>
-                    <Button type="submit" disabled={isSavingBrand} className="w-full mt-2">
-                      {isSavingBrand ? "Saving..." : "Apply Global Branding"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Logo URL</Label>
+                    <Input value={brandLogo} onChange={e => setBrandLogo(e.target.value)} placeholder="https://..." />
+                  </div>
+                  <Button type="submit" disabled={isSavingBrand} className="w-full mt-2">
+                    {isSavingBrand ? "Saving..." : "Apply Global Branding"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
