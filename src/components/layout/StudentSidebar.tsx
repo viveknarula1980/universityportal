@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { 
   LayoutDashboard, 
   FileText, 
@@ -28,6 +28,8 @@ export function StudentSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { slug } = useParams();
+  const basePath = slug ? `/p/${slug}` : '/';
   const navigate = useNavigate();
 
   return (
@@ -108,7 +110,7 @@ export function StudentSidebar() {
           )}
           onClick={() => {
             logout();
-            navigate("/");
+            navigate(basePath);
           }}
         >
           <LogOut className="w-4 h-4" />

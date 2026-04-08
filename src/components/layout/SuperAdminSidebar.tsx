@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   Building2,
@@ -19,6 +19,8 @@ export function SuperAdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { slug } = useParams();
+  const basePath = slug ? `/p/${slug}` : '/';
   const navigate = useNavigate();
 
   return (
@@ -97,7 +99,7 @@ export function SuperAdminSidebar() {
           )}
           onClick={() => {
             logout();
-            navigate("/");
+            navigate(basePath);
           }}
         >
           <LogOut className="w-4 h-4" />
