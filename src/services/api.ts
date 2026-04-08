@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:3000/api");
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
 
 interface ApiResponse<T> {
   success: boolean;
@@ -192,7 +192,6 @@ class ApiService {
 
   async downloadSubmissionFile(submissionId: string) {
     const token = this.getToken();
-    const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
     const response = await fetch(`${API_BASE_URL}/assignments/submissions/${submissionId}/download`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -333,8 +332,7 @@ class ApiService {
     formData.append("cv", file);
     
     const token = this.getToken();
-    const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
-    const response = await fetch(`${API_URL}/ai/analyze-cv`, {
+    const response = await fetch(`${API_BASE_URL}/ai/analyze-cv`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
