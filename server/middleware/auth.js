@@ -23,7 +23,9 @@ export async function authenticateToken(req, res, next) {
       email: user.email,
       name: user.name,
       role: user.role,
-      studentId: user.student_id
+      studentId: user.student_id,
+      university_id: user.university_id,
+      department: user.department
     };
     
     next();
