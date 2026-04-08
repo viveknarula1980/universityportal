@@ -26,9 +26,15 @@ export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { slug } = useParams();
-  const basePath = slug ? `/p/${slug}` : '/';
   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    const pathParts = location.pathname.split('/');
+    const currentSlug = (pathParts[1] === 'p' && pathParts[2]) ? pathParts[2] : '';
+    const targetPath = currentSlug ? `/p/${currentSlug}/login` : '/login';
+    logout();
+    navigate(targetPath);
+  };
 
   return (
     <aside 
@@ -104,10 +110,7 @@ export function AdminSidebar() {
             "w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
             collapsed ? "justify-center" : "justify-start"
           )}
-          onClick={() => {
-            logout();
-            navigate(basePath);
-          }}
+          onClick={handleLogout}
         >
           <LogOut className="w-4 h-4" />
           {!collapsed && <span>Log out</span>}
