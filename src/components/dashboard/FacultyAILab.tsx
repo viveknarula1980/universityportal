@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/services/api";
 
 export function FacultyAILab() {
   const [topic, setTopic] = useState("");
