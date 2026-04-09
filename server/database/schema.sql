@@ -150,3 +150,39 @@ CREATE TABLE IF NOT EXISTS university_settings (
     updated_at INTEGER NOT NULL
 );
 
+-- Innovation Hub: Projects
+CREATE TABLE IF NOT EXISTS projects (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    stream_tags TEXT, -- Comma separated for matching
+    creator_id TEXT NOT NULL,
+    university_id TEXT,
+    status TEXT DEFAULT 'open',
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (creator_id) REFERENCES users(id),
+    FOREIGN KEY (university_id) REFERENCES university_settings(id)
+);
+
+-- Project Members
+CREATE TABLE IF NOT EXISTS project_members (
+    project_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    role TEXT,
+    joined_at INTEGER NOT NULL,
+    PRIMARY KEY (project_id, user_id),
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Public Portfolio Settings
+CREATE TABLE IF NOT EXISTS public_profiles (
+    user_id TEXT PRIMARY KEY,
+    slug TEXT UNIQUE NOT NULL,
+    bio TEXT,
+    is_public BOOLEAN DEFAULT 0,
+    portfolio_data TEXT, -- JSON settings (which assignments to show)
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+

@@ -15,6 +15,8 @@ import certificateRoutes from './routes/certificates.js';
 import aiRoutes from './routes/ai.js';
 import adminRoutes from './routes/admin.js';
 import superadminRoutes from './routes/superadmin.js';
+import innovationRoutes from './routes/innovation.js';
+import publicProfileRoutes from './routes/public_profile.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -103,6 +105,8 @@ app.use('/api/certificates', certificateRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/superadmin', superadminRoutes);
+app.use('/api/innovation', innovationRoutes);
+app.use('/api/public-profile', publicProfileRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
