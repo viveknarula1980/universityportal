@@ -328,10 +328,16 @@ class ApiService {
   }
 
   // Faculty: Create Assignment
-  async createAssignment(data: { title: string; course: string; dueDate: string }) {
+  async createAssignment(data: { title: string; course: string; dueDate: string; status?: string }) {
     return this.request("/assignments/create", {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  }
+
+  async publishAssignment(id: string) {
+    return this.request(`/assignments/${id}/publish`, {
+      method: "POST",
     });
   }
 

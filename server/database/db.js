@@ -173,6 +173,12 @@ export async function initDatabase() {
           await db.runAsync("UPDATE assignments SET university_id = 'default'");
         }
 
+        const hasStatus = assignmentsTableInfo.some(col => col.name === 'status');
+        if (!hasStatus) {
+          console.log('🔄 Adding status column to assignments table...');
+          await db.runAsync("ALTER TABLE assignments ADD COLUMN status TEXT DEFAULT 'active'");
+        }
+
         const certsTableInfo = await db.allAsync("PRAGMA table_info(certificates)");
         const hasCertUnivId = certsTableInfo.some(col => col.name === 'university_id');
         if (!hasCertUnivId) {
@@ -245,6 +251,11 @@ export async function initDatabase() {
                   if (table === 'assignments' && !colNames.includes('stream')) {
                     console.log('🔄 Adding stream to assignments table (Postgres)...');
                     await db.execAsync("ALTER TABLE assignments ADD COLUMN stream TEXT");
+                  }
+
+                  if (table === 'assignments' && !colNames.includes('status')) {
+                    console.log('🔄 Adding status to assignments table (Postgres)...');
+                    await db.execAsync("ALTER TABLE assignments ADD COLUMN status TEXT DEFAULT 'active'");
                   }
                 }
              } catch (innerError) {

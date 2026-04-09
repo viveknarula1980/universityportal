@@ -169,10 +169,10 @@ router.get('/', authenticateToken, async (req, res) => {
     let query = `SELECT * FROM assignments ${univWhere}`;
     let params = req.user.role === 'super_admin' ? [] : [req.user.university_id || 'default'];
     
-    // Stream based filtering for students and faculty
-    if (req.user.role !== 'admin' && req.user.role !== 'super_admin' && req.user.department) {
-      query += req.user.role === 'super_admin' ? ' WHERE stream = ? OR stream IS NULL' : ' AND (stream = ? OR stream IS NULL)';
-      params.push(req.user.department);
+    // Status filtering: students only see 'active' assignments
+    if (req.user.role === 'student') {
+      query += ' AND status = ?';
+      params.push('active');
     }
     
     query += ' ORDER BY due_date DESC';
@@ -188,7 +188,7 @@ router.get('/', authenticateToken, async (req, res) => {
 // Faculty creates an assignment for their department
 router.post('/create', authenticateToken, requireRole('faculty'), async (req, res) => {
   try {
-    const { title, course, dueDate } = req.body;
+    const { title, course, dueDate, status = 'active' } = req.body;
 
     if (!title || !course || !dueDate) {
       return res.status(400).json({ success: false, error: 'Title, course, and due date are required' });
@@ -200,8 +200,8 @@ router.post('/create', authenticateToken, requireRole('faculty'), async (req, re
     const dueDateMs = new Date(dueDate).getTime();
 
     await db.runAsync(`
-      INSERT INTO assignments (id, title, course, stream, due_date, university_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO assignments (id, title, course, stream, due_date, university_id, created_at, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       assignmentId,
       title,
@@ -209,7 +209,8 @@ router.post('/create', authenticateToken, requireRole('faculty'), async (req, re
       stream,
       dueDateMs,
       req.user.university_id || 'default',
-      now
+      now,
+      status
     ]);
 
     // Log audit
@@ -219,17 +220,17 @@ router.post('/create', authenticateToken, requireRole('faculty'), async (req, re
     `, [
       `log-${now}`,
       req.user.id,
-      'assignment_created',
+      status === 'draft' ? 'assignment_draft_created' : 'assignment_created',
       'assignment',
       assignmentId,
-      `${title} (${course}) for stream: ${stream || 'All'}`,
+      `${title} (${course}) for stream: ${stream || 'All'}${status === 'draft' ? ' (Draft)' : ''}`,
       now
     ]);
 
     res.json({
       success: true,
-      message: 'Assignment created successfully',
-      data: { id: assignmentId, title, course, stream, dueDate: dueDateMs }
+      message: status === 'draft' ? 'Assignment draft saved' : 'Assignment created successfully',
+      data: { id: assignmentId, title, course, stream, dueDate: dueDateMs, status }
     });
   } catch (error) {
     console.error('Error creating assignment [FULL ERROR]:', error);
@@ -238,6 +239,43 @@ router.post('/create', authenticateToken, requireRole('faculty'), async (req, re
       error: 'Failed to create assignment',
       details: error.message 
     });
+  }
+});
+
+// Publish a draft assignment
+router.post('/:id/publish', authenticateToken, requireRole('faculty'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const now = Date.now();
+
+    const result = await db.runAsync(`
+      UPDATE assignments 
+      Set status = 'active' 
+      WHERE id = ? AND university_id = ?
+    `, [id, req.user.university_id || 'default']);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Assignment not found or unauthorized' });
+    }
+
+    // Log audit
+    await db.runAsync(`
+      INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, timestamp)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      `log-${now}`,
+      req.user.id,
+      'assignment_published',
+      'assignment',
+      id,
+      `Assignment ${id} published`,
+      now
+    ]);
+
+    res.json({ success: true, message: 'Assignment published successfully' });
+  } catch (error) {
+    console.error('Error publishing assignment:', error);
+    res.status(500).json({ success: false, error: 'Failed to publish assignment' });
   }
 });
 

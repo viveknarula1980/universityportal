@@ -11,7 +11,35 @@ export function FacultyAILab() {
   const [learningGoals, setLearningGoals] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [assignment, setAssignment] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+
+  const handleSaveDraft = async () => {
+    if (!assignment) return;
+    
+    setIsSaving(true);
+    try {
+      const defaultDueDate = new Date();
+      defaultDueDate.setDate(defaultDueDate.getDate() + 7); // Default to 7 days away
+      
+      const response = await apiService.createAssignment({
+        title: assignment.title,
+        course: topic, // Use topic as course name for draft
+        dueDate: defaultDueDate.toISOString().split('T')[0],
+        status: 'draft'
+      });
+      
+      if (response.success) {
+        toast({ title: "Saved to Drafts", description: "You can find this assignment in your Assignments list." });
+      } else {
+        throw new Error(response.error || "Failed to save");
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to save draft", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,9 +155,18 @@ export function FacultyAILab() {
                     ))}
                   </ul>
                 </div>
-                <Button variant="outline" className="w-full" onClick={() => toast({ title: "Saved", description: "Assignment draft saved to your drafts." })}>
-                  <FileText className="w-4 h-4 mr-2"/>
-                  Save to Drafts
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={handleSaveDraft}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <FileText className="w-4 h-4 mr-2"/>
+                  )}
+                  {isSaving ? "Saving..." : "Save to Drafts"}
                 </Button>
               </div>
            ) : (

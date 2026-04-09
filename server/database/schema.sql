@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS assignments (
     stream TEXT,
     due_date INTEGER NOT NULL,
     university_id TEXT,
+    status TEXT DEFAULT 'active' CHECK(status IN ('active', 'draft')),
     created_at INTEGER NOT NULL,
     FOREIGN KEY (university_id) REFERENCES university_settings(id)
 );

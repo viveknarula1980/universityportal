@@ -100,6 +100,18 @@ export default function FacultyDashboard() {
     }
   };
 
+  const handlePublishAssignment = async (id: string) => {
+    try {
+      const response = await apiService.publishAssignment(id);
+      if (response.success) {
+        toast({ title: "Assignment Published", description: "The assignment is now visible to students." });
+        loadAssignments();
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to publish", variant: "destructive" });
+    }
+  };
+
   const handleCreateAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsCreatingAssignment(true);
@@ -587,20 +599,47 @@ export default function FacultyDashboard() {
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
                     {assignments.map((a: any) => (
-                      <div key={a.id} className="glass-card rounded-xl p-4 border border-border hover:border-primary/20 transition-colors">
+                      <div key={a.id} className={cn(
+                        "glass-card rounded-xl p-4 border transition-colors",
+                        a.status === 'draft' ? "border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50" : "border-border hover:border-primary/20"
+                      )}>
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <h4 className="font-semibold text-sm">{a.title}</h4>
-                          {a.stream && (
-                            <Badge variant="outline" className="text-[10px] shrink-0 gap-1">
-                              <Building2 className="w-2.5 h-2.5" />
-                              {a.stream}
-                            </Badge>
-                          )}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-sm truncate">{a.title}</h4>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{a.course}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            {a.status === 'draft' && (
+                              <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-500 border-amber-500/20 px-1 py-0">
+                                Draft
+                              </Badge>
+                            )}
+                            {a.stream && (
+                              <Badge variant="outline" className="text-[9px] shrink-0 gap-0.5 px-1 py-0">
+                                <Building2 className="w-2 h-2" />
+                                {a.stream}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-xs text-muted-foreground mb-2">{a.course}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <CalendarDays className="w-3 h-3" />
-                          Due: {new Date(Number(a.due_date)).toLocaleDateString()}
+                        
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                            <CalendarDays className="w-3 h-3" />
+                            <span>Due: {new Date(Number(a.due_date)).toLocaleDateString()}</span>
+                          </div>
+                          
+                          {a.status === 'draft' && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-7 px-2 text-[10px] text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
+                              onClick={() => handlePublishAssignment(a.id)}
+                            >
+                              <Sparkles className="w-3 h-3 mr-1" />
+                              Publish
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
