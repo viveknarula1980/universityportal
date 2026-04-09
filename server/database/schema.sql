@@ -129,6 +129,16 @@ CREATE INDEX IF NOT EXISTS idx_submissions_assignment ON submissions(assignment_
 CREATE INDEX IF NOT EXISTS idx_certificates_student ON certificates(student_id);
 CREATE INDEX IF NOT EXISTS idx_blockchain_hash ON blockchain_records(blockchain_hash);
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage(user_id);
+CREATE INDEX IF NOT EXISTS idx_users_department ON users(department);
+
+-- Departments Table
+CREATE TABLE IF NOT EXISTS departments (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    university_id TEXT,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (university_id) REFERENCES university_settings(id)
+);
 
 -- Settings Table
 CREATE TABLE IF NOT EXISTS university_settings (

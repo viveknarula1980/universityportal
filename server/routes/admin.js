@@ -320,5 +320,112 @@ router.post('/users/bulk', authenticateToken, requireRole('admin'), async (req, 
   }
 });
 
+// ═══════════════════════════════════════
+// DEPARTMENT MANAGEMENT (Admin only)
+// ═══════════════════════════════════════
+
+// Get all departments for the current university
+router.get('/departments', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const univId = req.user.university_id || 'default';
+    const departments = await db.allAsync(
+      'SELECT * FROM departments WHERE university_id = ? ORDER BY name ASC',
+      [univId]
+    );
+    res.json({ success: true, data: departments });
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch departments' });
+  }
+});
+
+// Create a new department
+router.post('/departments', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, error: 'Department name is required' });
+    }
+
+    const univId = req.user.university_id || 'default';
+
+    // Check for duplicates
+    const existing = await db.getAsync(
+      'SELECT id FROM departments WHERE name = ? AND university_id = ?',
+      [name.trim(), univId]
+    );
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'Department already exists' });
+    }
+
+    const deptId = `dept-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    await db.runAsync(
+      'INSERT INTO departments (id, name, university_id, created_at) VALUES (?, ?, ?, ?)',
+      [deptId, name.trim(), univId, Date.now()]
+    );
+
+    res.json({ success: true, data: { id: deptId, name: name.trim() } });
+  } catch (error) {
+    console.error('Error creating department:', error);
+    res.status(500).json({ success: false, error: 'Failed to create department' });
+  }
+});
+
+// Delete a department
+router.delete('/departments/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.runAsync('DELETE FROM departments WHERE id = ?', [id]);
+    // Optionally clear department from users in that dept
+    // await db.runAsync('UPDATE users SET department = NULL WHERE department = (SELECT name FROM departments WHERE id = ?)', [id]);
+    res.json({ success: true, message: 'Department deleted' });
+  } catch (error) {
+    console.error('Error deleting department:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete department' });
+  }
+});
+
+// Update a user's department
+router.put('/users/:userId/department', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { department } = req.body;
+
+    await db.runAsync(
+      'UPDATE users SET department = ?, updated_at = ? WHERE id = ?',
+      [department || null, Date.now(), userId]
+    );
+
+    res.json({ success: true, message: 'User department updated' });
+  } catch (error) {
+    console.error('Error updating user department:', error);
+    res.status(500).json({ success: false, error: 'Failed to update department' });
+  }
+});
+
+// GET students for faculty (only students in their department)
+router.get('/faculty/students', authenticateToken, requireRole('faculty'), async (req, res) => {
+  try {
+    const department = req.user.department;
+    if (!department) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const students = await db.allAsync(`
+      SELECT id, name, email, student_id, department, created_at, is_verified
+      FROM users
+      WHERE role = 'student' AND department = ? AND university_id = ?
+      ORDER BY name ASC
+    `, [department, req.user.university_id || 'default']);
+
+    res.json({ success: true, data: students });
+  } catch (error) {
+    console.error('Error fetching faculty students:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch students' });
+  }
+});
+
 export default router;
+
+
 

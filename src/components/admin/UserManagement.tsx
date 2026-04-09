@@ -13,7 +13,10 @@ import {
   AlertCircle,
   Upload,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Building2,
+  X,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,15 +37,25 @@ interface User {
   created_at: number;
 }
 
+interface Department {
+  id: string;
+  name: string;
+}
+
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filterDept, setFilterDept] = useState("all");
+  const [filterRole, setFilterRole] = useState("all");
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [isBulkImporting, setIsBulkImporting] = useState(false);
+  const [isManagingDepts, setIsManagingDepts] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkPreview, setBulkPreview] = useState<any[]>([]);
+  const [newDeptName, setNewDeptName] = useState("");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -56,6 +69,7 @@ export function UserManagement() {
 
   useEffect(() => {
     loadUsers();
+    loadDepartments();
   }, []);
 
   const loadUsers = async () => {
@@ -74,6 +88,43 @@ export function UserManagement() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDepartments = async () => {
+    try {
+      const response = await apiService.getDepartments();
+      if (response.success && response.data) {
+        setDepartments(Array.isArray(response.data) ? response.data : []);
+      }
+    } catch (error) {
+      console.error("Failed to load departments:", error);
+    }
+  };
+
+  const handleAddDepartment = async () => {
+    if (!newDeptName.trim()) return;
+    try {
+      const response = await apiService.createDepartment(newDeptName.trim());
+      if (response.success) {
+        toast({ title: "Department Created", description: `"${newDeptName.trim()}" has been added.` });
+        setNewDeptName("");
+        loadDepartments();
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to create department", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteDepartment = async (id: string, name: string) => {
+    try {
+      const response = await apiService.deleteDepartment(id);
+      if (response.success) {
+        toast({ title: "Department Deleted", description: `"${name}" removed.` });
+        loadDepartments();
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to delete", variant: "destructive" });
     }
   };
 
@@ -117,7 +168,6 @@ export function UserManagement() {
       reader.onload = (event) => {
         const text = event.target?.result as string;
         const lines = text.split("\n");
-        const headers = lines[0].split(",");
         const preview = lines.slice(1, 6)
           .filter(line => line.trim() !== '')
           .map(line => {
@@ -158,8 +208,8 @@ export function UserManagement() {
             email: values[1]?.trim(),
             role: role,
             studentId: role === "student" ? values[3]?.trim() : null,
-            department: role === "faculty" ? values[3]?.trim() : null,
-            password: values[4]?.trim() || "temp123"
+            department: values[4]?.trim() || values[3]?.trim() || null,
+            password: values[5]?.trim() || values[4]?.trim() || "temp123"
           };
         });
 
@@ -190,7 +240,7 @@ export function UserManagement() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = "Full Name,Email,Role (student/faculty),Student ID or Department,Temporary Password\nJohn Doe,john@university.edu,student,STU-001,pass123\nDr. Smith,smith@university.edu,faculty,Computer Science,pass456";
+    const csvContent = "Full Name,Email,Role (student/faculty),Student ID,Department,Temporary Password\nJohn Doe,john@university.edu,student,STU-001,Computer Science,pass123\nDr. Smith,smith@university.edu,faculty,,Computer Science,pass456";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -202,14 +252,18 @@ export function UserManagement() {
     document.body.removeChild(a);
   };
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(search.toLowerCase()) ||
-    user.email.toLowerCase().includes(search.toLowerCase()) ||
-    user.student_id?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(search.toLowerCase()) ||
+      user.email.toLowerCase().includes(search.toLowerCase()) ||
+      user.student_id?.toLowerCase().includes(search.toLowerCase());
+    const matchesDept = filterDept === "all" || user.department === filterDept;
+    const matchesRole = filterRole === "all" || user.role === filterRole;
+    return matchesSearch && matchesDept && matchesRole;
+  });
 
   return (
     <div className="space-y-6">
+      {/* ═══ Action Bar ═══ */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -220,16 +274,113 @@ export function UserManagement() {
             className="pl-10"
           />
         </div>
-        <Button onClick={() => setIsBulkImporting(true)} variant="outline">
-          <Upload className="w-4 h-4 mr-2" />
-          Bulk Import
-        </Button>
-        <Button onClick={() => setIsAddingUser(true)} variant="gradient">
-          <UserPlus className="w-4 h-4 mr-2" />
-          Add New User
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsManagingDepts(!isManagingDepts)} variant="outline" size="sm" className="gap-2">
+            <Building2 className="w-4 h-4" />
+            Departments
+          </Button>
+          <Button onClick={() => setIsBulkImporting(true)} variant="outline" size="sm" className="gap-2">
+            <Upload className="w-4 h-4" />
+            Bulk Import
+          </Button>
+          <Button onClick={() => setIsAddingUser(true)} variant="gradient" size="sm" className="gap-2">
+            <UserPlus className="w-4 h-4" />
+            Add User
+          </Button>
+        </div>
       </div>
 
+      {/* ═══ Department Manager ═══ */}
+      {isManagingDepts && (
+        <div className="glass-card p-6 rounded-2xl border border-primary/20 animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-violet-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-display font-bold">Manage Departments / Streams</h3>
+                <p className="text-xs text-muted-foreground">Create departments to organize faculty and students</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setIsManagingDepts(false)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="flex gap-3 mb-4">
+            <Input
+              placeholder="e.g. Computer Science, Agriculture, Medical..."
+              value={newDeptName}
+              onChange={(e) => setNewDeptName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddDepartment()}
+              className="max-w-md"
+            />
+            <Button onClick={handleAddDepartment} disabled={!newDeptName.trim()} className="gap-2 shrink-0">
+              <Plus className="w-4 h-4" /> Add Department
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {departments.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">No departments created yet. Add your first one above.</p>
+            ) : (
+              departments.map((dept) => (
+                <div
+                  key={dept.id}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-lg border border-border group"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-violet-500" />
+                  <span className="text-sm font-medium">{dept.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    ({users.filter(u => u.department === dept.name).length} users)
+                  </span>
+                  <button
+                    onClick={() => handleDeleteDepartment(dept.id, dept.name)}
+                    className="ml-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Filters ═══ */}
+      <div className="flex gap-3 items-center">
+        <select
+          value={filterRole}
+          onChange={(e) => setFilterRole(e.target.value)}
+          className="h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="all">All Roles</option>
+          <option value="student">Students</option>
+          <option value="faculty">Faculty</option>
+        </select>
+        <select
+          value={filterDept}
+          onChange={(e) => setFilterDept(e.target.value)}
+          className="h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="all">All Departments</option>
+          {departments.map(d => (
+            <option key={d.id} value={d.name}>{d.name}</option>
+          ))}
+          <option value="">Unassigned</option>
+        </select>
+        {(filterRole !== "all" || filterDept !== "all") && (
+          <Button variant="ghost" size="sm" onClick={() => { setFilterRole("all"); setFilterDept("all"); }} className="text-xs">
+            Clear Filters
+          </Button>
+        )}
+        <span className="text-xs text-muted-foreground ml-auto">
+          {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''} shown
+        </span>
+      </div>
+
+    {/* ═══ Bulk Import Panel ═══ */}
     {isBulkImporting && (
       <div className="glass-card p-6 rounded-2xl border border-primary/20 animate-in slide-in-from-top-4 duration-300 mb-6">
         <div className="flex items-center justify-between mb-6">
@@ -253,7 +404,7 @@ export function UserManagement() {
                <Upload className="w-8 h-8 text-muted-foreground" />
                <div>
                   <p className="text-sm font-medium">{bulkFile ? bulkFile.name : "Select CSV File"}</p>
-                  <p className="text-xs text-muted-foreground">CSV format: Name, Email, Role, ID/Dept, Password</p>
+                  <p className="text-xs text-muted-foreground">CSV format: Name, Email, Role, Student ID, Department, Password</p>
                </div>
              </div>
              <input 
@@ -307,12 +458,13 @@ export function UserManagement() {
       </div>
     )}
 
+      {/* ═══ Add User Form ═══ */}
       {isAddingUser && (
         <div className="glass-card p-6 rounded-2xl border border-primary/20 animate-in slide-in-from-top-4 duration-300">
            <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-display font-bold">Register New Portal User</h3>
               <Button variant="ghost" size="icon" onClick={() => setIsAddingUser(false)}>
-                <AlertCircle className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </Button>
            </div>
 
@@ -377,7 +529,30 @@ export function UserManagement() {
                 </div>
               </div>
 
-              {formData.role === "student" ? (
+              {/* Department — for BOTH roles */}
+              <div className="space-y-2">
+                <Label htmlFor="department">
+                  <Building2 className="w-3.5 h-3.5 inline mr-1.5" />
+                  Department / Stream
+                </Label>
+                <select 
+                  id="department"
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={formData.department}
+                  onChange={(e) => setFormData({...formData, department: e.target.value})}
+                  required
+                >
+                  <option value="">Select Department...</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.name}>{d.name}</option>
+                  ))}
+                </select>
+                {departments.length === 0 && (
+                  <p className="text-xs text-amber-500">No departments yet. Create one first using the Departments button above.</p>
+                )}
+              </div>
+
+              {formData.role === "student" && (
                 <div className="space-y-2">
                   <Label htmlFor="studentId">Student ID</Label>
                   <div className="relative">
@@ -388,22 +563,6 @@ export function UserManagement() {
                       className="pl-10" 
                       value={formData.studentId}
                       onChange={(e) => setFormData({...formData, studentId: e.target.value})}
-                      required={formData.role === "student"}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <div className="relative">
-                    <School className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      id="department" 
-                      placeholder="Computer Science" 
-                      className="pl-10" 
-                      value={formData.department}
-                      onChange={(e) => setFormData({...formData, department: e.target.value})}
-                      required={formData.role === "faculty"}
                     />
                   </div>
                 </div>
@@ -423,6 +582,7 @@ export function UserManagement() {
         </div>
       )}
 
+      {/* ═══ User Table ═══ */}
       <div className="glass-card rounded-2xl overflow-hidden border border-border">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -430,7 +590,8 @@ export function UserManagement() {
               <tr className="bg-secondary/50 border-b border-border">
                 <th className="p-4 font-display font-semibold text-sm">User</th>
                 <th className="p-4 font-display font-semibold text-sm">Role</th>
-                <th className="p-4 font-display font-semibold text-sm">ID / Dept</th>
+                <th className="p-4 font-display font-semibold text-sm">Department</th>
+                <th className="p-4 font-display font-semibold text-sm">ID</th>
                 <th className="p-4 font-display font-semibold text-sm">Status</th>
                 <th className="p-4 font-display font-semibold text-sm text-right">Registered</th>
               </tr>
@@ -438,14 +599,14 @@ export function UserManagement() {
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="p-12 text-center text-muted-foreground">
+                  <td colSpan={6} className="p-12 text-center text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Fetching user records...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-12 text-center text-muted-foreground">
+                  <td colSpan={6} className="p-12 text-center text-muted-foreground">
                     No users found matching your search.
                   </td>
                 </tr>
@@ -471,8 +632,18 @@ export function UserManagement() {
                         {user.role}
                       </Badge>
                     </td>
-                    <td className="p-4 text-sm text-muted-foreground">
-                      {user.role === 'student' ? user.student_id : user.department}
+                    <td className="p-4">
+                      {user.department ? (
+                        <Badge variant="outline" className="text-xs gap-1">
+                          <Building2 className="w-3 h-3" />
+                          {user.department}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Unassigned</span>
+                      )}
+                    </td>
+                    <td className="p-4 text-sm text-muted-foreground font-mono text-xs">
+                      {user.student_id || '—'}
                     </td>
                     <td className="p-4">
                        <Badge 

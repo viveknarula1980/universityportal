@@ -185,6 +185,59 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Faculty creates an assignment for their department
+router.post('/create', authenticateToken, requireRole('faculty'), async (req, res) => {
+  try {
+    const { title, course, dueDate } = req.body;
+
+    if (!title || !course || !dueDate) {
+      return res.status(400).json({ success: false, error: 'Title, course, and due date are required' });
+    }
+
+    const assignmentId = generateAssignmentId();
+    const stream = req.user.department || null; // auto-assign to faculty's department
+    const now = Date.now();
+    const dueDateMs = new Date(dueDate).getTime();
+
+    await db.runAsync(`
+      INSERT INTO assignments (id, title, course, stream, due_date, university_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      assignmentId,
+      title,
+      course,
+      stream,
+      dueDateMs,
+      req.user.university_id || 'default',
+      now
+    ]);
+
+    // Log audit
+    await db.runAsync(`
+      INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, timestamp)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      `log-${now}`,
+      req.user.id,
+      'assignment_created',
+      'assignment',
+      assignmentId,
+      `${title} (${course}) for stream: ${stream || 'All'}`,
+      now
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Assignment created successfully',
+      data: { id: assignmentId, title, course, stream, dueDate: dueDateMs }
+    });
+  } catch (error) {
+    console.error('Error creating assignment:', error);
+    res.status(500).json({ success: false, error: 'Failed to create assignment' });
+  }
+});
+
+
 // Get user submissions (for students)
 router.get('/submissions', authenticateToken, async (req, res) => {
   try {
@@ -480,9 +533,9 @@ router.get('/dashboard', authenticateToken, requireRole('student'), async (req, 
         s.created_at as submitted_at
       FROM assignments a
       LEFT JOIN submissions s ON a.id = s.assignment_id AND s.student_id = ?
-      WHERE a.university_id = ?
+      WHERE a.university_id = ? AND (a.stream = ? OR a.stream IS NULL)
       ORDER BY a.due_date DESC
-    `, [userId, req.user.university_id || 'default']);
+    `, [userId, req.user.university_id || 'default', req.user.department || null]);
 
     // Calculate stats
     const total = allAssignments.length;

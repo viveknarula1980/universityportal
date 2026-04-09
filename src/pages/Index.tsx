@@ -1,4 +1,4 @@
-import { FileText, CheckCircle2, Clock, Sparkles, ExternalLink } from "lucide-react";
+import { FileText, CheckCircle2, Clock, Sparkles, ExternalLink, Building2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { AIUsageMeter } from "@/components/dashboard/AIUsageMeter";
@@ -116,9 +116,17 @@ const Index = () => {
       <div className="space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-display font-bold">
-            Welcome back, <span className="gradient-text">{user?.name || "Student"}</span>
-          </h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl font-display font-bold">
+              Welcome back, <span className="gradient-text">{user?.name || "Student"}</span>
+            </h1>
+            {user?.department && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 text-xs font-semibold">
+                <Building2 className="w-3.5 h-3.5" />
+                {user.department}
+              </span>
+            )}
+          </div>
           <p className="text-muted-foreground">
             Here's an overview of your academic progress and assignments.
           </p>

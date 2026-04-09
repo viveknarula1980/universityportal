@@ -277,6 +277,10 @@ class ApiService {
     return this.request("/admin/users");
   }
 
+  async getFacultyStudents() {
+    return this.request("/admin/faculty/students");
+  }
+
   async createAdminUser(userData: {
     email: string;
     password: string;
@@ -297,6 +301,40 @@ class ApiService {
       body: JSON.stringify({ users }),
     });
   }
+
+  // Department Management APIs
+  async getDepartments() {
+    return this.request("/admin/departments");
+  }
+
+  async createDepartment(name: string) {
+    return this.request("/admin/departments", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async deleteDepartment(id: string) {
+    return this.request(`/admin/departments/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async updateUserDepartment(userId: string, department: string) {
+    return this.request(`/admin/users/${userId}/department`, {
+      method: "PUT",
+      body: JSON.stringify({ department }),
+    });
+  }
+
+  // Faculty: Create Assignment
+  async createAssignment(data: { title: string; course: string; dueDate: string }) {
+    return this.request("/assignments/create", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   async getBlockchainRecords() {
     return this.request("/blockchain/records");
   }

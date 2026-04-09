@@ -312,6 +312,20 @@ export async function initDatabase() {
         console.log('✅ Default branding settings initialized');
     }
 
+    // Seed default departments
+    const deptCount = await db.getAsync("SELECT COUNT(*) as count FROM departments WHERE university_id = 'default'");
+    if (deptCount && deptCount.count === 0) {
+        const defaultDepts = ['Computer Science', 'Agriculture', 'Medical'];
+        for (const name of defaultDepts) {
+            const deptId = `dept-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+            await db.runAsync(
+                'INSERT INTO departments (id, name, university_id, created_at) VALUES (?, ?, ?, ?)',
+                [deptId, name, 'default', Date.now()]
+            );
+        }
+        console.log('✅ Default departments seeded');
+    }
+
   } catch (error) {
     console.error('❌ Database initialization error:', error.message);
   }

@@ -10,11 +10,17 @@ import {
   Award,
   Download,
   X,
-  Link2
+  Link2,
+  Building2,
+  Plus,
+  BookOpen,
+  CalendarDays,
+  Loader2
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { FacultyAILab } from "@/components/dashboard/FacultyAILab";
 import { FacultyRiskAnalytics } from "@/components/dashboard/FacultyRiskAnalytics";
 
@@ -43,6 +50,7 @@ interface Submission {
 }
 
 export default function FacultyDashboard() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
@@ -58,11 +66,56 @@ export default function FacultyDashboard() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [gradingSubmission, setGradingSubmission] = useState<string | null>(null);
   const [gradeInput, setGradeInput] = useState("");
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [newAssignment, setNewAssignment] = useState({ title: "", course: "", dueDate: "" });
+  const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     loadSubmissions();
+    loadAssignments();
+    loadStudents();
   }, [filter, selectedCourse, search]);
+
+  const loadStudents = async () => {
+    try {
+      const response = await apiService.getFacultyStudents();
+      if (response.success && response.data) {
+        setStudents(Array.isArray(response.data) ? response.data : []);
+      }
+    } catch (error) {
+      console.error("Failed to load students:", error);
+    }
+  };
+
+  const loadAssignments = async () => {
+    try {
+      const response = await apiService.getAssignments();
+      if (response.success && response.data) {
+        setAssignments(Array.isArray(response.data) ? response.data : []);
+      }
+    } catch (error) {
+      console.error("Failed to load assignments:", error);
+    }
+  };
+
+  const handleCreateAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreatingAssignment(true);
+    try {
+      const response = await apiService.createAssignment(newAssignment);
+      if (response.success) {
+        toast({ title: "Assignment Created", description: `"${newAssignment.title}" has been assigned to your department.` });
+        setNewAssignment({ title: "", course: "", dueDate: "" });
+        loadAssignments();
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to create assignment", variant: "destructive" });
+    } finally {
+      setIsCreatingAssignment(false);
+    }
+  };
 
   const loadSubmissions = async () => {
     try {
@@ -226,9 +279,17 @@ export default function FacultyDashboard() {
             </div>
             <div>
               <h1 className="text-3xl font-display font-bold">Faculty Dashboard</h1>
-              <p className="text-muted-foreground">
-                Review submissions and track student progress
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-muted-foreground">
+                  Review submissions and track student progress
+                </p>
+                {user?.department && (
+                  <Badge variant="outline" className="gap-1 text-xs">
+                    <Building2 className="w-3 h-3" />
+                    {user.department}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -279,6 +340,8 @@ export default function FacultyDashboard() {
         <Tabs defaultValue="submissions" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="students" className="gap-1.5"><Users className="w-3.5 h-3.5" /> Students</TabsTrigger>
+            <TabsTrigger value="create-assignment" className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Create Assignment</TabsTrigger>
             <TabsTrigger value="ai-lab">AI Assignment Lab</TabsTrigger>
             <TabsTrigger value="risk-analytics">Risk Analytics</TabsTrigger>
           </TabsList>
@@ -428,6 +491,159 @@ export default function FacultyDashboard() {
             </div>
           )}
         </div>
+          </TabsContent>
+
+          {/* ═══ Create Assignment Tab ═══ */}
+          <TabsContent value="create-assignment" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Create Form */}
+              <div className="glass-card rounded-2xl p-6 lg:col-span-1">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Plus className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-lg">New Assignment</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {user?.department ? `For ${user.department} students` : 'For all students'}
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleCreateAssignment} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="a-title">Assignment Title</Label>
+                    <div className="relative">
+                      <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="a-title"
+                        placeholder="e.g. Data Structures Lab 3"
+                        className="pl-10"
+                        value={newAssignment.title}
+                        onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="a-course">Course Name</Label>
+                    <div className="relative">
+                      <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="a-course"
+                        placeholder="e.g. CS201"
+                        className="pl-10"
+                        value={newAssignment.course}
+                        onChange={(e) => setNewAssignment({ ...newAssignment, course: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="a-due">Due Date</Label>
+                    <div className="relative">
+                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="a-due"
+                        type="date"
+                        className="pl-10"
+                        value={newAssignment.dueDate}
+                        onChange={(e) => setNewAssignment({ ...newAssignment, dueDate: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {user?.department && (
+                    <div className="p-3 bg-violet-500/5 border border-violet-500/20 rounded-xl text-xs flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-violet-500 shrink-0" />
+                      <span className="text-muted-foreground">This assignment will be visible only to <strong className="text-foreground">{user.department}</strong> students.</span>
+                    </div>
+                  )}
+
+                  <Button type="submit" variant="gradient" className="w-full" disabled={isCreatingAssignment}>
+                    {isCreatingAssignment ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...</>
+                    ) : (
+                      <><Plus className="w-4 h-4 mr-2" /> Create Assignment</>
+                    )}
+                  </Button>
+                </form>
+              </div>
+
+              {/* Existing Assignments */}
+              <div className="lg:col-span-2 space-y-4">
+                <h3 className="font-display font-bold flex items-center gap-2">
+                  Your Assignments
+                  <Badge variant="secondary">{assignments.length}</Badge>
+                </h3>
+                {assignments.length === 0 ? (
+                  <div className="glass-card rounded-2xl p-12 text-center">
+                    <BookOpen className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                    <p className="text-muted-foreground">No assignments yet. Create your first one!</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {assignments.map((a: any) => (
+                      <div key={a.id} className="glass-card rounded-xl p-4 border border-border hover:border-primary/20 transition-colors">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h4 className="font-semibold text-sm">{a.title}</h4>
+                          {a.stream && (
+                            <Badge variant="outline" className="text-[10px] shrink-0 gap-1">
+                              <Building2 className="w-2.5 h-2.5" />
+                              {a.stream}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">{a.course}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <CalendarDays className="w-3 h-3" />
+                          Due: {new Date(Number(a.due_date)).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* ═══ Students Tab ═══ */}
+          <TabsContent value="students" className="space-y-6">
+            <div className="glass-card rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-display font-semibold">Department Students</h2>
+                <Badge variant="secondary">{students.length} Enrolled</Badge>
+              </div>
+
+              {students.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  No students found in your department.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {students.map((student) => (
+                    <div key={student.id} className="p-4 rounded-xl border border-border bg-secondary/20 hover:border-primary/30 transition-all flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                        {student.name.charAt(0)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">{student.name}</p>
+                        <p className="text-xs text-muted-foreground">{student.student_id || 'No ID'}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{student.email}</p>
+                      </div>
+                      {student.is_verified ? (
+                        <CheckCircle2 className="w-4 h-4 text-success" />
+                      ) : (
+                        <Clock className="w-4 h-4 text-warning" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="ai-lab">
