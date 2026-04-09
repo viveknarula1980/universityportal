@@ -658,7 +658,10 @@ export function UserManagement() {
                        </Badge>
                     </td>
                     <td className="p-4 text-right text-xs text-muted-foreground">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {(() => {
+                        const ts = Number(user.created_at);
+                        return !isNaN(ts) ? new Date(ts).toLocaleDateString() : 'N/A';
+                      })()}
                     </td>
                   </tr>
                 ))

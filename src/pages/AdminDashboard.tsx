@@ -200,7 +200,7 @@ export default function AdminDashboard() {
   };
 
   const formatDateTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString("en-US", {
+    return new Date(Number(timestamp)).toLocaleString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",

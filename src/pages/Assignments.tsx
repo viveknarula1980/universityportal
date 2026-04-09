@@ -87,7 +87,7 @@ export default function Assignments() {
   });
 
   const formatDueDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
+    return new Date(Number(timestamp)).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",

@@ -552,7 +552,7 @@ router.get('/dashboard', authenticateToken, requireRole('student'), async (req, 
       id: a.id,
       title: a.title,
       course: a.course,
-      dueDate: new Date(a.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      dueDate: new Date(Number(a.due_date)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       status: a.submission_id 
         ? (a.submission_status === 'graded' ? 'graded' : 'submitted')
         : (a.due_date < now ? 'late' : 'pending'),
