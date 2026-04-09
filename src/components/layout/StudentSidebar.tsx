@@ -16,7 +16,10 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-
+const navItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/student" },
+  { icon: FileText, label: "Assignments", path: "/assignments" },
+  { icon: Sparkles, label: "AI Generator", path: "/ai-generator" },
   { icon: Award, label: "My Certificates", path: "/my-certificates" },
   { icon: Rocket, label: "Innovation Hub", path: "/innovation-hub" },
   { icon: Globe, label: "Public Portfolio", path: "/portfolio-settings" },
