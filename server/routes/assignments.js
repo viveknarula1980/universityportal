@@ -232,8 +232,12 @@ router.post('/create', authenticateToken, requireRole('faculty'), async (req, re
       data: { id: assignmentId, title, course, stream, dueDate: dueDateMs }
     });
   } catch (error) {
-    console.error('Error creating assignment:', error);
-    res.status(500).json({ success: false, error: 'Failed to create assignment' });
+    console.error('Error creating assignment [FULL ERROR]:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to create assignment',
+      details: error.message 
+    });
   }
 });
 

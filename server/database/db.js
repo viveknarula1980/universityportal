@@ -197,35 +197,87 @@ export async function initDatabase() {
           console.log('🔄 Checking for PostgreSQL migrations (slug, university_id)...');
           
           // Check users for university_id
-          const hasUnivId = await pool.query(`
+          const usersCols = await pool.query(`
             SELECT column_name FROM information_schema.columns 
-            WHERE table_name = 'users' AND column_name = 'university_id'
+            WHERE table_name = 'users'
           `);
-          if (hasUnivId.rowCount === 0) {
+          const userColNames = usersCols.rows.map(r => r.column_name);
+
+          if (!userColNames.includes('university_id')) {
             await db.execAsync("ALTER TABLE users ADD COLUMN university_id TEXT");
             await db.execAsync("UPDATE users SET university_id = 'default'");
           }
-
-          // Check university_settings for slug
-          const hasSlug = await pool.query(`
-            SELECT column_name FROM information_schema.columns 
-            WHERE table_name = 'university_settings' AND column_name = 'slug'
-          `);
-          if (hasSlug.rowCount === 0) {
-            await db.execAsync("ALTER TABLE university_settings ADD COLUMN slug TEXT UNIQUE");
-            await db.execAsync("UPDATE university_settings SET slug = 'default' WHERE id = 'default'");
+          if (!userColNames.includes('google_id')) {
+            await db.execAsync("ALTER TABLE users ADD COLUMN google_id TEXT");
+          }
+          if (!userColNames.includes('is_verified')) {
+            await db.execAsync("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT TRUE");
+            await db.execAsync("UPDATE users SET is_verified = TRUE");
           }
 
-          // Check assignments, certificates, submissions for university_id
+          // Check university_settings for slug
+          const settingsCols = await pool.query(`
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'university_settings'
+          `);
+          const settingsColNames = settingsCols.rows.map(r => r.column_name);
+          if (!settingsColNames.includes('slug')) {
+             await db.execAsync("ALTER TABLE university_settings ADD COLUMN slug TEXT UNIQUE");
+             await db.execAsync("UPDATE university_settings SET slug = 'default' WHERE id = 'default'");
+          }
+
+          // Check assignments, certificates, submissions for university_id and stream
           for (const table of ['assignments', 'certificates', 'submissions']) {
-             const hasTableUnivId = await pool.query(`
-               SELECT column_name FROM information_schema.columns 
-               WHERE table_name = '${table}' AND column_name = 'university_id'
-             `);
-             if (hasTableUnivId.rowCount === 0) {
-               await db.execAsync(`ALTER TABLE ${table} ADD COLUMN university_id TEXT`);
-               await db.execAsync(`UPDATE ${table} SET university_id = 'default'`);
+             try {
+                const tableCols = await pool.query(`
+                  SELECT column_name FROM information_schema.columns 
+                  WHERE table_name = '${table}'
+                `);
+                const colNames = tableCols.rows.map(r => r.column_name);
+
+                if (colNames.length > 0) {
+                  if (!colNames.includes('university_id')) {
+                    console.log(`🔄 Adding university_id to ${table} table (Postgres)...`);
+                    await db.execAsync(`ALTER TABLE ${table} ADD COLUMN university_id TEXT`);
+                    await db.execAsync(`UPDATE ${table} SET university_id = 'default'`);
+                  }
+
+                  if (table === 'assignments' && !colNames.includes('stream')) {
+                    console.log('🔄 Adding stream to assignments table (Postgres)...');
+                    await db.execAsync("ALTER TABLE assignments ADD COLUMN stream TEXT");
+                  }
+                }
+             } catch (innerError) {
+                console.warn(`⚠️ Migration check failed for table ${table}:`, innerError.message);
              }
+          // Final Postgres column check for types (overflow prevention)
+          console.log('🔄 Checking for PostgreSQL column type migrations...');
+          const timestampCols = [
+            { table: 'assignments', columns: ['due_date', 'created_at'] },
+            { table: 'submissions', columns: ['timestamp'] },
+            { table: 'certificates', columns: ['issue_date', 'created_at'] },
+            { table: 'audit_logs', columns: ['timestamp'] },
+            { table: 'blockchain_records', columns: ['timestamp', 'created_at'] },
+            { table: 'ai_usage', columns: ['created_at'] },
+            { table: 'ai_limits', columns: ['created_at', 'updated_at'] },
+            { table: 'departments', columns: ['created_at'] }
+          ];
+
+          for (const item of timestampCols) {
+            for (const col of item.columns) {
+              try {
+                const colInfo = await pool.query(`
+                  SELECT data_type FROM information_schema.columns 
+                  WHERE table_name = '${item.table}' AND column_name = '${col}'
+                `);
+                if (colInfo.rowCount > 0 && colInfo.rows[0].data_type === 'integer') {
+                  console.log(`🔄 Converting ${item.table}.${col} to BIGINT (Postgres)...`);
+                  await db.execAsync(`ALTER TABLE ${item.table} ALTER COLUMN ${col} TYPE BIGINT`);
+                }
+              } catch (e) {
+                console.warn(`⚠️ Could not convert ${item.table}.${col}:`, e.message);
+              }
+            }
           }
         } catch (migrationError) {
           console.warn('⚠️ Postgres migration check failed:', migrationError.message);
