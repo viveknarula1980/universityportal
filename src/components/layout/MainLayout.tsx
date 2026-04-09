@@ -5,7 +5,6 @@ import { StudentSidebar } from "./StudentSidebar";
 import { FacultySidebar } from "./FacultySidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { SuperAdminSidebar } from "./SuperAdminSidebar";
-import { AIStudyBuddy } from "../shared/AIStudyBuddy";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -59,9 +58,6 @@ export function MainLayout({ children, role }: MainLayoutProps) {
           {children}
         </div>
       </main>
-      <div className="no-print">
-        <AIStudyBuddy />
-      </div>
     </div>
   );
 }

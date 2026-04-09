@@ -9,9 +9,7 @@ import {
   User,
   LogOut,
   ChevronLeft,
-  Award,
-  Rocket,
-  Globe
+  Award
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,8 +19,6 @@ const navItems = [
   { icon: FileText, label: "Assignments", path: "/assignments" },
   { icon: Sparkles, label: "AI Generator", path: "/ai-generator" },
   { icon: Award, label: "My Certificates", path: "/my-certificates" },
-  { icon: Rocket, label: "Innovation Hub", path: "/innovation-hub" },
-  { icon: Globe, label: "Public Portfolio", path: "/portfolio-settings" },
   { icon: Link2, label: "Blockchain", path: "/blockchain" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];

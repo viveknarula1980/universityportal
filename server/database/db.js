@@ -226,30 +226,26 @@ export async function initDatabase() {
              await db.execAsync("UPDATE university_settings SET slug = 'default' WHERE id = 'default'");
           }
 
-          // Check assignments, certificates, submissions, projects, public_profiles for university_id and stream
-          for (const table of ['assignments', 'certificates', 'submissions', 'projects', 'public_profiles']) {
+          // Check assignments, certificates, submissions for university_id and stream
+          for (const table of ['assignments', 'certificates', 'submissions']) {
              try {
                 const tableCols = await pool.query(`
                   SELECT column_name FROM information_schema.columns 
                   WHERE table_name = '${table}'
                 `);
-                
-                if (tableCols.rowCount === 0) {
-                   // Table might not exist yet if schema execution failed or was skipped
-                   continue;
-                }
-
                 const colNames = tableCols.rows.map(r => r.column_name);
 
-                if (!colNames.includes('university_id') && table !== 'public_profiles' && table !== 'project_members') {
+                if (colNames.length > 0) {
+                  if (!colNames.includes('university_id')) {
                     console.log(`🔄 Adding university_id to ${table} table (Postgres)...`);
                     await db.execAsync(`ALTER TABLE ${table} ADD COLUMN university_id TEXT`);
                     await db.execAsync(`UPDATE ${table} SET university_id = 'default'`);
-                }
+                  }
 
-                if (table === 'assignments' && !colNames.includes('stream')) {
+                  if (table === 'assignments' && !colNames.includes('stream')) {
                     console.log('🔄 Adding stream to assignments table (Postgres)...');
                     await db.execAsync("ALTER TABLE assignments ADD COLUMN stream TEXT");
+                  }
                 }
              } catch (innerError) {
                 console.warn(`⚠️ Migration check failed for table ${table}:`, innerError.message);
@@ -265,10 +261,7 @@ export async function initDatabase() {
             { table: 'blockchain_records', columns: ['timestamp', 'created_at'] },
             { table: 'ai_usage', columns: ['created_at'] },
             { table: 'ai_limits', columns: ['created_at', 'updated_at'] },
-            { table: 'departments', columns: ['created_at'] },
-            { table: 'projects', columns: ['created_at'] },
-            { table: 'project_members', columns: ['joined_at'] },
-            { table: 'public_profiles', columns: ['updated_at'] }
+            { table: 'departments', columns: ['created_at'] }
           ];
 
           for (const item of timestampCols) {

@@ -12,9 +12,6 @@ import Index from "./pages/Index";
 import Assignments from "./pages/Assignments";
 import AIGenerator from "./pages/AIGenerator";
 import Blockchain from "./pages/Blockchain";
-import InnovationHub from "./pages/InnovationHub";
-import PublicProfile from "./pages/PublicProfile";
-import PortfolioSettings from "./pages/PortfolioSettings";
 import Settings from "./pages/Settings";
 import CertificateIssuance from "./pages/CertificateIssuance";
 import MyCertificates from "./pages/MyCertificates";
@@ -135,9 +132,6 @@ const App = () => (
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/blockchain" element={<Blockchain />} />
-            <Route path="/innovation-hub" element={<InnovationHub />} />
-            <Route path="/profile/:slug" element={<PublicProfile />} />
-            <Route path="/portfolio-settings" element={<PortfolioSettings />} />
             
             {/* Branded Entry Points */}
             <Route path="/p/:slug" element={<Landing />} />

@@ -339,40 +339,6 @@ class ApiService {
     return this.request("/blockchain/records");
   }
 
-  // Innovation Hub
-  async getProjects() {
-    return this.request("/innovation/projects");
-  }
-
-  async createProject(data: { title: string; description: string; streamTags: string }) {
-    return this.request("/innovation/projects", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
-
-  async joinProject(id: string) {
-    return this.request(`/innovation/projects/${id}/join`, {
-      method: "POST",
-    });
-  }
-
-  // Public Portfolios
-  async getPublicProfile(slug: string) {
-    return this.request(`/public-profile/profile/${slug}`);
-  }
-
-  async getProfileSettings() {
-    return this.request("/public-profile/settings");
-  }
-
-  async updateProfileSettings(data: { slug: string; bio: string; isPublic: boolean; portfolioData: any }) {
-    return this.request("/public-profile/settings", {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  }
-
   async getBlockchainRecord(hash: string) {
     return this.request(`/blockchain/records/${hash}`);
   }
