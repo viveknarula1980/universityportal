@@ -33,30 +33,38 @@ export default function AIGenerator() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [fileHash, setFileHash] = useState<string | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState("");
+  const [availableAssignments, setAvailableAssignments] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedHash, setSubmittedHash] = useState<string | null>(null);
   const [aiUsage, setAiUsage] = useState({ used: 0, total: 25000, daysUntilReset: 0 });
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch AI usage data
+  // Fetch AI usage and assignments
   useEffect(() => {
-    const fetchAIUsage = async () => {
+    const fetchData = async () => {
       try {
-        const response = await apiService.getAIUsage();
-        if (response.success && response.data) {
+        // Fetch AI usage
+        const usageResponse = await apiService.getAIUsage();
+        if (usageResponse.success && usageResponse.data) {
           setAiUsage({
-            used: response.data.used || 0,
-            total: response.data.limit || 25000,
-            daysUntilReset: response.data.daysUntilReset,
+            used: usageResponse.data.used || 0,
+            total: usageResponse.data.limit || 25000,
+            daysUntilReset: usageResponse.data.daysUntilReset,
           });
         }
+
+        // Fetch available assignments
+        const assignmentsResponse = await apiService.getAssignments();
+        if (assignmentsResponse.success && assignmentsResponse.data) {
+          setAvailableAssignments(assignmentsResponse.data);
+        }
       } catch (error) {
-        console.error('Failed to fetch AI usage:', error);
+        console.error('Failed to fetch data:', error);
       }
     };
     
-    fetchAIUsage();
+    fetchData();
   }, []);
 
   const handleGenerate = async () => {
@@ -235,11 +243,7 @@ export default function AIGenerator() {
     }
   };
 
-  const availableAssignments = [
-    { id: "1", title: "Machine Learning Project", course: "CS 4510 - Artificial Intelligence" },
-    { id: "2", title: "Database Design Essay", course: "CS 3200 - Databases" },
-    { id: "3", title: "Algorithm Analysis", course: "CS 3100 - Algorithms" },
-  ];
+
 
   return (
     <MainLayout>
