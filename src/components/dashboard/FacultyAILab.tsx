@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiService } from "@/services/api";
 
 export function FacultyAILab() {
   const [topic, setTopic] = useState("");
@@ -23,17 +22,29 @@ export function FacultyAILab() {
       const defaultDueDate = new Date();
       defaultDueDate.setDate(defaultDueDate.getDate() + 7); // Default to 7 days away
       
-      const response = await apiService.createAssignment({
-        title: assignment.title,
-        course: topic, // Use topic as course name for draft
-        dueDate: defaultDueDate.toISOString().split('T')[0],
-        status: 'draft'
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch(`${API_URL}/assignments/create`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        },
+        body: JSON.stringify({
+          title: assignment.title,
+          course: topic,
+          dueDate: defaultDueDate.toISOString().split('T')[0],
+          status: 'draft'
+        }),
       });
       
-      if (response.success) {
+      const data = await response.json();
+      
+      if (data.success) {
         toast({ title: "Saved to Drafts", description: "You can find this assignment in your Assignments list." });
       } else {
-        throw new Error(response.error || "Failed to save");
+        throw new Error(data.error || "Failed to save");
       }
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to save draft", variant: "destructive" });
