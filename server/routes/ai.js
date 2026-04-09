@@ -458,7 +458,8 @@ The output MUST be a valid JSON object matching this EXACT structure:
   "instructions": ["...", "..."],
   "gradingCriteria": ["...", "..."],
   "estimatedTimeHours": 4
-}`;
+}
+CRITICAL: Do not include ANY text before or after the JSON. Do not use trailing commas in arrays or objects.`;
 
     const prompt = `Create an assignment on the topic "${topic}". 
 Difficulty level: ${difficulty || 'Intermediate'}. 
@@ -480,24 +481,28 @@ Learning goals: ${learningGoals || 'General understanding and application'}.`;
 
     let assignmentData;
     try {
-      let content = result.content;
+      let content = result.content.trim();
       
-      // Clean up markdown block syntax if present
-      if (content.includes('```json')) {
-        content = content.split('```json')[1].split('```')[0];
-      } else if (content.includes('```')) {
-        content = content.split('```')[1].split('```')[0];
+      // Remove possible markdown wrappers
+      content = content.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+      content = content.replace(/^```\s*/, '').replace(/```\s*$/, '');
+
+      // Extract only the part between { and }
+      const firstBrace = content.indexOf('{');
+      const lastBrace = content.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        content = content.substring(firstBrace, lastBrace + 1);
       }
 
-      const startIndex = content.indexOf('{');
-      const endIndex = content.lastIndexOf('}');
-      if (startIndex !== -1 && endIndex !== -1) {
-        content = content.substring(startIndex, endIndex + 1);
-      }
-      assignmentData = JSON.parse(content);
+      // Final cleanup of common JSON malformations (like trailing commas)
+      const cleanJson = content.replace(/,\s*([\]}])/g, '$1'); 
+      
+      assignmentData = JSON.parse(cleanJson);
     } catch (parseError) {
       console.error('Failed to parse AI assignment JSON symptoms:', parseError);
+      console.error('Cleaned content attempted:', content);
       console.error('Raw content received:', result.content);
+      
       return res.status(500).json({ 
         success: false, 
         error: 'AI failed to return valid assignment data.',
