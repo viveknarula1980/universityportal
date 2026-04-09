@@ -470,9 +470,25 @@ Learning goals: ${learningGoals || 'General understanding and application'}.`;
       systemPrompt: systemPrompt
     });
 
+    if (result.error) {
+      return res.status(403).json({ 
+        success: false, 
+        error: result.error,
+        message: result.content // Provide the helpful instructions from common service fallback
+      });
+    }
+
     let assignmentData;
     try {
       let content = result.content;
+      
+      // Clean up markdown block syntax if present
+      if (content.includes('```json')) {
+        content = content.split('```json')[1].split('```')[0];
+      } else if (content.includes('```')) {
+        content = content.split('```')[1].split('```')[0];
+      }
+
       const startIndex = content.indexOf('{');
       const endIndex = content.lastIndexOf('}');
       if (startIndex !== -1 && endIndex !== -1) {
@@ -480,8 +496,13 @@ Learning goals: ${learningGoals || 'General understanding and application'}.`;
       }
       assignmentData = JSON.parse(content);
     } catch (parseError) {
-      console.error('Failed to parse AI assignment JSON:', parseError);
-      return res.status(500).json({ success: false, error: 'AI failed to return valid assignment data.' });
+      console.error('Failed to parse AI assignment JSON symptoms:', parseError);
+      console.error('Raw content received:', result.content);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'AI failed to return valid assignment data.',
+        details: 'The AI provided a response that could not be parsed as JSON. Please try again.'
+      });
     }
 
     res.json({ success: true, data: assignmentData });
