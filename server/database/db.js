@@ -250,6 +250,7 @@ export async function initDatabase() {
              } catch (innerError) {
                 console.warn(`⚠️ Migration check failed for table ${table}:`, innerError.message);
              }
+          }
           // Final Postgres column check for types (overflow prevention)
           console.log('🔄 Checking for PostgreSQL column type migrations...');
           const timestampCols = [
