@@ -214,7 +214,7 @@ router.post('/users', authenticateToken, requireRole('admin'), async (req, res) 
     await db.runAsync(`
       INSERT INTO users (id, email, password_hash, name, role, student_id, department, is_verified, created_at, updated_at, university_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [userId, email, passwordHash, name, role, studentId || null, department || null, 1, now, now, req.user.university_id || 'default']);
+    `, [userId, email, passwordHash, name, role, studentId || null, department || null, true, now, now, req.user.university_id || 'default']);
 
     // Log audit
     await db.runAsync(`
@@ -284,7 +284,7 @@ router.post('/users/bulk', authenticateToken, requireRole('admin'), async (req, 
         await db.runAsync(`
           INSERT INTO users (id, email, password_hash, name, role, student_id, department, is_verified, created_at, updated_at, university_id)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [userId, email, passwordHash, name, role, studentId || null, department || null, 1, now, now, req.user.university_id || 'default']);
+        `, [userId, email, passwordHash, name, role, studentId || null, department || null, true, now, now, req.user.university_id || 'default']);
 
         results.success++;
       }

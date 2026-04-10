@@ -237,15 +237,18 @@ router.post('/login', [
 router.post('/google', async (req, res) => {
   try {
     const { credential, role } = req.body; // credential is the JWT from Google
+    const slug = req.headers['x-university-slug'] || req.body.slug || 'default';
     
+    console.log(`🔍 Google Login attempt: role=${role}, slug=${slug}`);
+
     if (!credential) {
+      console.error('❌ Google Login error: credential missing');
       return res.status(400).json({ success: false, error: 'Google credential missing' });
     }
 
     // Verify Google Token
     let payload;
     try {
-      // In development, if GOOGLE_CLIENT_ID is not set, we might mock this or skip strict validation
       if (process.env.GOOGLE_CLIENT_ID) {
         const ticket = await googleClient.verifyIdToken({
           idToken: credential,
@@ -254,46 +257,57 @@ router.post('/google', async (req, res) => {
         payload = ticket.getPayload();
       } else {
         // Fallback for dev: decode JWT without verification if Client ID is missing
+        console.warn('⚠️ GOOGLE_CLIENT_ID not set. Decoding token without verification.');
         payload = jwt.decode(credential);
-        console.warn('⚠️ VERIFYING GOOGLE TOKEN WITHOUT CLIENT ID. DO NOT DO THIS IN PRODUCTION.');
       }
     } catch (err) {
+      console.error('❌ Google Token verification failed:', err.message);
       return res.status(401).json({ success: false, error: 'Invalid Google token' });
     }
 
     if (!payload || !payload.email) {
+      console.error('❌ Google Login error: Invalid payload', payload);
       return res.status(400).json({ success: false, error: 'Invalid token payload' });
     }
 
-    const email = payload.email ? payload.email.toLowerCase() : '';
+    const email = payload.email.toLowerCase();
     const name = payload.name;
     const googleId = payload.sub;
 
-    const slug = req.headers['x-university-slug'] || req.body.slug || 'default';
+    console.log(`🔍 Google User identified: ${email}`);
 
     // Check if user exists
     let user = await db.getAsync('SELECT u.*, s.slug as user_slug FROM users u LEFT JOIN university_settings s ON u.university_id = s.id WHERE u.email = ?', [email]);
-    let userId;
-
+    
     if (!user) {
-      // DENY: Google login should only work if an admin has already created the account
+      console.error(`❌ Google Login error: No user found for ${email}`);
       return res.status(401).json({ 
         success: false, 
-        error: 'No account found for this email. Please contact your administrator.' 
+        error: 'No account found for this email. Please contact your administrator to create your student account first.' 
       });
     }
 
+    // Role check - ensure they are logging into the correct portal
+    if (role && user.role !== role) {
+       console.error(`❌ Google Login error: Role mismatch. User is ${user.role}, trying to login as ${role}`);
+       return res.status(403).json({ 
+         success: false, 
+         error: `This portal is for ${role}s only. Your account is registered as ${user.role}.` 
+       });
+    }
+
     if (user.role !== 'super_admin' && (user.user_slug !== slug && !(slug === 'default' && !user.user_slug))) {
-      console.log(`❌ Google Access denied: User belongs to ${user.user_slug}, tried logging into ${slug}`);
+      console.error(`❌ Google Access denied: User belongs to ${user.user_slug}, tried logging into ${slug}`);
       return res.status(403).json({ success: false, error: 'Access denied. You do not belong to this university portal.' });
     }
 
-    userId = user.id;
+    const userId = user.id;
     // Link google_id if it's the first time this user logs in with Google
     if (!user.google_id) {
-      await db.runAsync('UPDATE users SET google_id = ?, is_verified = 1, updated_at = ? WHERE id = ?', [googleId, Date.now(), userId]);
+      console.log(`🔗 Linking Google account for user: ${userId}`);
+      await db.runAsync('UPDATE users SET google_id = ?, is_verified = true, updated_at = ? WHERE id = ?', [googleId, Date.now(), userId]);
       user.google_id = googleId;
-      user.is_verified = 1;
+      user.is_verified = true;
     }
 
     // Generate app token
@@ -302,6 +316,8 @@ router.post('/google', async (req, res) => {
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
+
+    console.log(`✅ Google Login successful for: ${email}`);
 
     res.json({
       success: true,
@@ -312,14 +328,14 @@ router.post('/google', async (req, res) => {
         role: user.role,
         studentId: user.student_id,
         department: user.department,
-        isVerified: user.is_verified === 1
+        isVerified: !!user.is_verified
       },
       token
     });
 
   } catch (error) {
-    console.error('Google Login error:', error);
-    res.status(500).json({ success: false, error: 'Google login failed' });
+    console.error('💥 Critical Google Login error:', error);
+    res.status(500).json({ success: false, error: 'Google login failed', details: error.message });
   }
 });
 
@@ -408,7 +424,7 @@ router.post('/verify-otp', async (req, res) => {
 
     // Mark user as verified if not already
     if (!user.is_verified) {
-        await db.runAsync('UPDATE users SET is_verified = 1 WHERE email = ?', [email]);
+        await db.runAsync('UPDATE users SET is_verified = true WHERE email = ?', [email]);
     }
 
     // Generate token

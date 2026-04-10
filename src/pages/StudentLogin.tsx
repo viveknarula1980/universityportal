@@ -202,16 +202,16 @@ export default function StudentLogin() {
                 <div className="space-y-6">
                   <div className="flex justify-center w-full">
                      <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={() => {
-                          toast({ title: "Login Failed", description: "Google authentication failed", variant: "destructive" });
-                        }}
-                        useOneTap
-                        shape="pill"
-                        theme="filled_blue"
-                        text="continue_with"
-                        width="auto"
-                      />
+                         onSuccess={handleGoogleSuccess}
+                         onError={() => {
+                           toast({ title: "Login Failed", description: "Google authentication failed", variant: "destructive" });
+                         }}
+                         useOneTap={false}
+                         shape="pill"
+                         theme="filled_blue"
+                         text="continue_with"
+                         width={250}
+                       />
                   </div>
 
                   <div className="relative">

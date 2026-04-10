@@ -53,7 +53,7 @@ router.post('/instances', authenticateToken, requireRole('super_admin'), async (
     await db.runAsync(`
       INSERT INTO users (id, email, password_hash, name, role, is_verified, university_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [userId, adminEmail, passwordHash, adminName || universityName + ' Admin', 'admin', 1, universityId, now, now]);
+    `, [userId, adminEmail, passwordHash, adminName || universityName + ' Admin', 'admin', true, universityId, now, now]);
 
     res.json({
       success: true,
