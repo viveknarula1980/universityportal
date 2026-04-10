@@ -6,6 +6,8 @@ import { FacultySidebar } from "./FacultySidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { SuperAdminSidebar } from "./SuperAdminSidebar";
 
+import { MobileHeader } from "./MobileHeader";
+
 interface MainLayoutProps {
   children: ReactNode;
   role?: "student" | "faculty" | "admin" | "super_admin";
@@ -48,13 +50,28 @@ export function MainLayout({ children, role }: MainLayoutProps) {
     }
   };
 
+  const universityName = localStorage.getItem('university_name');
+  const logoUrl = localStorage.getItem('logo_url');
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
+      {/* Mobile Header (Hidden on Laptop+) */}
       <div className="no-print">
+        <MobileHeader 
+          universityName={universityName} 
+          logoUrl={logoUrl} 
+          sidebarComponent={renderSidebar()} 
+        />
+      </div>
+
+      {/* Desktop Sidebar (Hidden on Mobile) */}
+      <div className="no-print hidden lg:block sticky top-0 h-screen">
         {renderSidebar()}
       </div>
-      <main className="ml-20 lg:ml-64 transition-all duration-300 print:m-0 print:p-0">
-        <div className="p-6 lg:p-8 print:p-0">
+
+      {/* Main Content Area */}
+      <main className="flex-1 w-full transition-all duration-300 print:m-0 print:p-0 pt-16 lg:pt-0">
+        <div className="p-4 md:p-6 lg:p-8 print:p-0 max-w-[1600px] mx-auto">
           {children}
         </div>
       </main>

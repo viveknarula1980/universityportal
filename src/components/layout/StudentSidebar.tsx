@@ -43,7 +43,8 @@ export function StudentSidebar() {
   return (
     <aside 
       className={cn(
-        "fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 z-50",
+        "bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 z-50",
+        "lg:fixed lg:left-0 lg:top-0 lg:h-screen h-full",
         collapsed ? "w-20" : "w-64"
       )}
     >
@@ -57,19 +58,17 @@ export function StudentSidebar() {
               <Sparkles className="w-5 h-5 text-primary-foreground" />
             )}
           </div>
-          {!collapsed && (
-            <div>
-              <h1 className="font-display font-bold text-lg leading-tight truncate max-w-[120px]">
-                {localStorage.getItem('university_name') || 'EduChain'}
-              </h1>
-              <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">Student Portal</p>
-            </div>
-          )}
+          <div className={cn("transition-all duration-300", collapsed ? "hidden" : "block")}>
+            <h1 className="font-display font-bold text-lg leading-tight truncate max-w-[120px]">
+              {localStorage.getItem('university_name') || 'EduChain'}
+            </h1>
+            <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">Student Portal</p>
+          </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navItems.map((item) => {
           const itemPath = `${basePath}${item.path}`;
           const isActive = location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`);
@@ -86,7 +85,9 @@ export function StudentSidebar() {
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span className="font-medium">{item.label}</span>}
+              <span className={cn("font-medium transition-all duration-300", collapsed ? "hidden" : "block")}>
+                {item.label}
+              </span>
             </Link>
           );
         })}
@@ -101,14 +102,12 @@ export function StudentSidebar() {
           <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
             <User className="w-5 h-5" />
           </div>
-          {!collapsed && (
-            <div className="flex-1">
-              <p className="font-medium text-sm">{user?.name || "Student"}</p>
-              <p className="text-xs text-sidebar-foreground/60">
-                {user?.studentId || "Student"}
-              </p>
-            </div>
-          )}
+          <div className={cn("flex-1 transition-all duration-300", collapsed ? "hidden" : "block")}>
+            <p className="font-medium text-sm truncate">{user?.name || "Student"}</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate">
+              {user?.studentId || "Student"}
+            </p>
+          </div>
         </div>
         
         <Button 
@@ -120,14 +119,16 @@ export function StudentSidebar() {
           onClick={handleLogout}
         >
           <LogOut className="w-4 h-4" />
-          {!collapsed && <span>Log out</span>}
+          <span className={cn("ml-3 transition-all duration-300", collapsed ? "hidden" : "block")}>
+            Log out
+          </span>
         </Button>
       </div>
 
-      {/* Collapse Toggle */}
+      {/* Collapse Toggle - Hidden on Mobile */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-card border border-border shadow-md flex items-center justify-center hover:bg-accent transition-colors"
+        className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-card border border-border shadow-md items-center justify-center hover:bg-accent transition-colors"
       >
         <ChevronLeft className={cn(
           "w-4 h-4 text-foreground transition-transform",

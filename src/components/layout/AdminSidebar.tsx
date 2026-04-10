@@ -42,39 +42,35 @@ export function AdminSidebar() {
   return (
     <aside 
       className={cn(
-        "fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 z-50",
+        "bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 z-50",
+        "lg:fixed lg:left-0 lg:top-0 lg:h-screen h-full",
         collapsed ? "w-20" : "w-64"
       )}
     >
       {/* Logo */}
       <div className="p-6 flex items-center justify-between border-b border-sidebar-border">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
             {localStorage.getItem('logo_url') ? (
               <img src={localStorage.getItem('logo_url') || ''} alt="logo" className="w-6 h-6 object-contain" />
             ) : (
               <Settings className="w-5 h-5 text-white" />
             )}
           </div>
-          {!collapsed && (
-            <div>
-              <h1 className="font-display font-bold text-lg leading-tight truncate max-w-[120px]">
-                 {localStorage.getItem('university_name') || 'EduChain'}
-              </h1>
-              <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">Admin Portal</p>
-            </div>
-          )}
+          <div className={cn("transition-all duration-300", collapsed ? "hidden" : "block")}>
+             <h1 className="font-display font-bold text-lg leading-tight truncate max-w-[120px]">
+               {localStorage.getItem('university_name') || 'EduChain'}
+             </h1>
+            <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">Admin Portal</p>
+          </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navItems.map((item) => {
-          let itemPath = item.path;
-          if (!item.path.startsWith('http')) {
-            itemPath = `${basePath}${item.path}`;
-          }
-          const isActive = location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`) || location.search.includes(item.path.split('?')[1] || 'xxxxxxxxxx');
+          const itemPath = `${basePath}${item.path}`;
+          const isActive = location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`);
           return (
             <Link
               key={item.path}
@@ -88,7 +84,9 @@ export function AdminSidebar() {
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span className="font-medium">{item.label}</span>}
+              <span className={cn("font-medium transition-all duration-300", collapsed ? "hidden" : "block")}>
+                {item.label}
+              </span>
             </Link>
           );
         })}
@@ -100,15 +98,13 @@ export function AdminSidebar() {
           "flex items-center gap-3 mb-4",
           collapsed && "justify-center"
         )}>
-          <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center text-amber-500">
             <User className="w-5 h-5" />
           </div>
-          {!collapsed && (
-            <div className="flex-1">
-              <p className="font-medium text-sm">{user?.name || "Admin"}</p>
-              <p className="text-xs text-sidebar-foreground/60">Administrator</p>
-            </div>
-          )}
+          <div className={cn("flex-1 transition-all duration-300", collapsed ? "hidden" : "block")}>
+            <p className="font-medium text-sm truncate">{user?.name || "Admin"}</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate">Administrator</p>
+          </div>
         </div>
         
         <Button 
@@ -120,14 +116,16 @@ export function AdminSidebar() {
           onClick={handleLogout}
         >
           <LogOut className="w-4 h-4" />
-          {!collapsed && <span>Log out</span>}
+          <span className={cn("ml-3 transition-all duration-300", collapsed ? "hidden" : "block")}>
+            Log out
+          </span>
         </Button>
       </div>
 
-      {/* Collapse Toggle */}
+      {/* Collapse Toggle - Hidden on Mobile */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-card border border-border shadow-md flex items-center justify-center hover:bg-accent transition-colors"
+        className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-card border border-border shadow-md items-center justify-center hover:bg-accent transition-colors"
       >
         <ChevronLeft className={cn(
           "w-4 h-4 text-foreground transition-transform",

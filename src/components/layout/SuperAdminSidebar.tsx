@@ -29,101 +29,94 @@ export function SuperAdminSidebar() {
   const handleLogout = () => {
     const targetPath = currentSlug ? `/p/${currentSlug}` : '/';
     logout();
-    navigate(targetPath);
+    navigate('/');
   };
 
   return (
     <aside 
       className={cn(
-        "fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 z-50",
+        "bg-zinc-950 text-white flex flex-col transition-all duration-300 z-50",
+        "lg:fixed lg:left-0 lg:top-0 lg:h-screen h-full",
         collapsed ? "w-20" : "w-64"
       )}
     >
       {/* Logo */}
-      <div className="p-6 flex items-center justify-between border-b border-sidebar-border">
+      <div className="p-6 flex items-center justify-between border-b border-zinc-800">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-            {localStorage.getItem('logo_url') ? (
-               <img src={localStorage.getItem('logo_url') || ''} alt="logo" className="w-6 h-6 object-contain" />
-            ) : (
-               <Settings className="w-5 h-5 text-white" />
-            )}
+           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+            <ShieldAlert className="w-5 h-5 text-white" />
           </div>
-          {!collapsed && (
-            <div>
-              <h1 className="font-display font-bold text-lg leading-tight truncate max-w-[120px]">
-                {localStorage.getItem('university_name') || 'EduChain'}
-              </h1>
-              <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">Super Admin</p>
-            </div>
-          )}
+          <div className={cn("transition-all duration-300", collapsed ? "hidden" : "block")}>
+             <h1 className="font-display font-bold text-lg leading-tight truncate max-w-[120px]">
+               EduChain
+             </h1>
+            <p className="text-[10px] text-indigo-400 uppercase tracking-wider">Super Admin</p>
+          </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navItems.map((item) => {
-          let itemPath = item.path;
-          if (!item.path.startsWith('http')) {
-            itemPath = `${basePath}${item.path}`;
-          }
-          const isActive = location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`);
+          const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
           return (
             <Link
               key={item.path}
-              to={itemPath}
+              to={item.path}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
                 isActive 
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg" 
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                  ? "bg-indigo-600 text-white shadow-lg" 
+                  : "text-zinc-400 hover:bg-zinc-900 hover:text-white",
                 collapsed && "justify-center px-3"
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span className="font-medium">{item.label}</span>}
+              <span className={cn("font-medium transition-all duration-300", collapsed ? "hidden" : "block")}>
+                {item.label}
+              </span>
             </Link>
           );
         })}
       </nav>
 
       {/* User Section */}
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-zinc-800">
         <div className={cn(
           "flex items-center gap-3 mb-4",
           collapsed && "justify-center"
         )}>
-          <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-indigo-400">
             <User className="w-5 h-5" />
           </div>
-          {!collapsed && (
-            <div className="flex-1">
-              <p className="font-medium text-sm">{user?.name || "Super Admin"}</p>
-              <p className="text-xs text-sidebar-foreground/60">System Controller</p>
-            </div>
-          )}
+          <div className={cn("flex-1 transition-all duration-300", collapsed ? "hidden" : "block")}>
+            <p className="font-medium text-sm truncate">{user?.name || "Super Admin"}</p>
+            <p className="text-xs text-zinc-500 truncate">System Controller</p>
+          </div>
         </div>
         
         <Button 
           variant="ghost" 
           className={cn(
-            "w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+            "w-full text-zinc-400 hover:text-white hover:bg-zinc-900",
             collapsed ? "justify-center" : "justify-start"
           )}
           onClick={handleLogout}
         >
           <LogOut className="w-4 h-4" />
-          {!collapsed && <span>Log out</span>}
+          <span className={cn("ml-3 transition-all duration-300", collapsed ? "hidden" : "block")}>
+            Log out
+          </span>
         </Button>
       </div>
 
-      {/* Collapse Toggle */}
+      {/* Collapse Toggle - Hidden on Mobile */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-card border border-border shadow-md flex items-center justify-center hover:bg-accent transition-colors"
+        className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-zinc-900 border border-zinc-800 shadow-md items-center justify-center hover:bg-zinc-800 transition-colors"
       >
         <ChevronLeft className={cn(
-          "w-4 h-4 text-foreground transition-transform",
+          "w-4 h-4 text-white transition-transform",
           collapsed && "rotate-180"
         )} />
       </button>
