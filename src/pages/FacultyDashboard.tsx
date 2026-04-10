@@ -50,7 +50,32 @@ interface Submission {
 }
 
 export default function FacultyDashboard() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // Extract slug for URL management
+  const pathParts = location.pathname.split('/');
+  const currentSlug = (pathParts[1] === 'p' && pathParts[2]) ? pathParts[2] : (localStorage.getItem('university_slug') || '');
+  const basePath = currentSlug ? `/p/${currentSlug}` : '';
+
+  // Determine active tab based on path
+  const getActiveTab = () => {
+    if (location.pathname.includes('/submissions')) return 'submissions';
+    if (location.pathname.includes('/students')) return 'students';
+    if (location.pathname.includes('/ai-lab')) return 'ai-lab';
+    if (location.pathname.includes('/risk-analytics')) return 'risk-analytics';
+    if (location.pathname.includes('/create-assignment')) return 'create-assignment';
+    return 'overview'; // Default for /faculty
+  };
+
+  const activeTab = getActiveTab();
+
+  const handleTabChange = (value: string) => {
+    const newPath = value === 'overview' ? `${basePath}/faculty` : `${basePath}/faculty/${value}`;
+    navigate(newPath);
+  };
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
@@ -306,57 +331,95 @@ export default function FacultyDashboard() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-primary" />
-              </div>
-              <span className="text-sm text-muted-foreground">Total Submissions</span>
-            </div>
-            <p className="text-3xl font-display font-bold">{stats.totalSubmissions}</p>
-          </div>
-
-          <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-warning" />
-              </div>
-              <span className="text-sm text-muted-foreground">Pending Review</span>
-            </div>
-            <p className="text-3xl font-display font-bold">{stats.pending}</p>
-          </div>
-
-          <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-ai-secondary flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-ai" />
-              </div>
-              <span className="text-sm text-muted-foreground">AI Assisted</span>
-            </div>
-            <p className="text-3xl font-display font-bold">{stats.aiAssisted}</p>
-          </div>
-
-          <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
-                <Award className="w-5 h-5 text-success" />
-              </div>
-              <span className="text-sm text-muted-foreground">Average Grade</span>
-            </div>
-            <p className="text-3xl font-display font-bold">{stats.averageGrade}</p>
-          </div>
-        </div>
-
-        <Tabs defaultValue="submissions" className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="mb-4">
+            <TabsTrigger value="overview">Dashboard</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
             <TabsTrigger value="students" className="gap-1.5"><Users className="w-3.5 h-3.5" /> Students</TabsTrigger>
             <TabsTrigger value="create-assignment" className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Create Assignment</TabsTrigger>
             <TabsTrigger value="ai-lab">AI Assignment Lab</TabsTrigger>
             <TabsTrigger value="risk-analytics">Risk Analytics</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="overview" className="space-y-8">
+            {/* Stats moved into Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="glass-card rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">Total Submissions</span>
+                </div>
+                <p className="text-3xl font-display font-bold">{stats.totalSubmissions}</p>
+              </div>
+
+              <div className="glass-card rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-warning" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">Pending Review</span>
+                </div>
+                <p className="text-3xl font-display font-bold">{stats.pending}</p>
+              </div>
+
+              <div className="glass-card rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-ai-secondary flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-ai" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">AI Assisted</span>
+                </div>
+                <p className="text-3xl font-display font-bold">{stats.aiAssisted}</p>
+              </div>
+
+              <div className="glass-card rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
+                    <Award className="w-5 h-5 text-success" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">Average Grade</span>
+                </div>
+                <p className="text-3xl font-display font-bold">{stats.averageGrade}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="glass-card rounded-2xl p-6">
+                <h3 className="font-display font-bold mb-4">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => handleTabChange('submissions')}>
+                    <FileText className="w-6 h-6" />
+                    Review Submissions
+                  </Button>
+                  <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => handleTabChange('create-assignment')}>
+                    <Plus className="w-6 h-6" />
+                    Post Assignment
+                  </Button>
+                </div>
+              </div>
+              <div className="glass-card rounded-2xl p-6">
+                <h3 className="font-display font-bold mb-4">Department Overview</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl">
+                    <div className="flex items-center gap-2">
+                       <Users className="w-4 h-4 text-muted-foreground" />
+                       <span className="text-sm font-medium">Enrolled Students</span>
+                    </div>
+                    <Badge variant="secondary">{students.length}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl">
+                    <div className="flex items-center gap-2">
+                       <BookOpen className="w-4 h-4 text-muted-foreground" />
+                       <span className="text-sm font-medium">Active Assignments</span>
+                    </div>
+                    <Badge variant="secondary">{assignments.filter(a => a.status !== 'draft').length}</Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
 
           <TabsContent value="submissions" className="space-y-6">
             {/* Filters */}
