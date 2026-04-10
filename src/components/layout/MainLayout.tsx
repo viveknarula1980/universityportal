@@ -17,21 +17,24 @@ export function MainLayout({ children, role }: MainLayoutProps) {
   const location = useLocation();
   const { user } = useAuth();
   
-  // Determine role: use prop first, then user's role, then detect from path
+  // Determine role: use prop first, then path detection, then user's role
   let detectedRole: "student" | "faculty" | "admin" | "super_admin" = "student";
+  
   if (role) {
     detectedRole = role;
+  } else if (location.pathname.includes("/superadmin")) {
+    detectedRole = "super_admin";
+  } else if (location.pathname.includes("/faculty")) {
+    detectedRole = "faculty";
+  } else if (location.pathname.includes("/admin") || location.pathname.includes("/certificate-issuance")) {
+    detectedRole = "admin";
   } else if (user?.role) {
-    // Use the actual user's role from auth context
+    // Fallback to the actual user's role from auth context
     detectedRole = user.role as "student" | "faculty" | "admin" | "super_admin";
   } else {
-    // Fallback to path detection
-    if (location.pathname.startsWith("/superadmin")) {
-      detectedRole = "super_admin";
-    } else if (location.pathname.startsWith("/faculty")) {
-      detectedRole = "faculty";
-    } else if (location.pathname.startsWith("/admin") || location.pathname.startsWith("/certificate-issuance")) {
-      detectedRole = "admin";
+    // Final fallback based on deep path matching
+    if (location.pathname.includes("/student") || location.pathname.includes("/assignments") || location.pathname.includes("/ai-generator")) {
+      detectedRole = "student";
     } else {
       detectedRole = "student";
     }
