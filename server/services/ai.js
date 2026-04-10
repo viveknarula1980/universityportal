@@ -439,16 +439,14 @@ class AIService {
         }
       }
       
-      // If we couldn't list models, use fallback list with latest models
+      // If we couldn't list models, use fallback list with stable models
       if (availableModels.length === 0) {
         console.log('⚠️  Could not list available models, using fallback list');
         availableModels = [
-          'gemini-2.5-flash',      // Latest fast model
-          'gemini-3-flash',         // Latest flash model
-          'gemini-2.5-flash-lite',  // Lite version
-          'gemini-pro',             // Classic model
-          'gemini-1.5-pro',         // Pro model
-          'gemini-1.5-flash',       // Flash model
+          'gemini-1.5-flash',       // Standard stable flash model
+          'gemini-2.0-flash-exp',   // Latest experimental flash model
+          'gemini-1.5-pro',         // Standard stable pro model
+          'gemini-pro',             // Legacy pro model
           this.geminiModel          // User configured model
         ].filter(m => m); // Remove undefined
       }
