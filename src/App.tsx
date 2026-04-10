@@ -23,7 +23,8 @@ import AdminLogin from "./pages/AdminLogin";
 import Verification from "./pages/Verification";
 import NotFound from "./pages/NotFound";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import { AlertCircle } from "lucide-react";
 
 // Convert hex to HSL for Tailwind
 function hexToHSL(hex: string) {
@@ -54,6 +55,9 @@ function hexToHSL(hex: string) {
 }
 
 function BrandingProvider({ children }: { children: React.ReactNode }) {
+  const [isSuspended, setIsSuspended] = useState(false);
+  const [suspendMessage, setSuspendMessage] = useState("");
+
   useEffect(() => {
     const fetchBranding = async () => {
       try {
@@ -64,7 +68,6 @@ function BrandingProvider({ children }: { children: React.ReactNode }) {
           slug = pathParts[2];
         } else {
           // If not in a branded path, we ensure we use default branding
-          // and clear any previous session branding to prevent "ghosting"
           slug = '';
         }
 
@@ -74,7 +77,6 @@ function BrandingProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(urlRequest);
         const data = await res.json();
         
-        // Always clear previous branding to prevent cross-instance leaking
         localStorage.removeItem('university_name');
         localStorage.removeItem('primary_color');
         localStorage.removeItem('logo_url');
@@ -82,6 +84,13 @@ function BrandingProvider({ children }: { children: React.ReactNode }) {
         document.documentElement.style.removeProperty('--primary');
 
         if (data.success && data.data) {
+          if (data.data.suspended) {
+            setIsSuspended(true);
+            setSuspendMessage(data.data.university_name ? `${data.data.university_name}'s portal` : "This university portal");
+          } else {
+            setIsSuspended(false);
+          }
+
           if (data.data.university_name) {
             document.title = data.data.university_name;
             localStorage.setItem('university_name', data.data.university_name);
@@ -111,6 +120,30 @@ function BrandingProvider({ children }: { children: React.ReactNode }) {
     fetchBranding();
   }, [window.location.pathname]);
   
+  if (isSuspended) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4">
+        <div className="max-w-md w-full glass-card p-8 rounded-2xl text-center space-y-6">
+          <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-bold">Portal Suspended</h1>
+          <p className="text-muted-foreground">
+            {suspendMessage} has been temporarily suspended by the platform administrator.
+          </p>
+          <p className="text-sm text-zinc-500">
+            Please contact your organization's IT department or the platform super admin for more information.
+          </p>
+          <div className="pt-4">
+             <a href="/" className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
+               Return to Platform Home
+             </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }
 
