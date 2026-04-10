@@ -148,6 +148,8 @@ CREATE TABLE IF NOT EXISTS university_settings (
     university_name TEXT,
     primary_color TEXT,
     logo_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    ai_token_limit INTEGER DEFAULT 100000,
     updated_at INTEGER NOT NULL
 );
 

@@ -158,6 +158,20 @@ export async function initDatabase() {
           await db.runAsync("UPDATE university_settings SET slug = 'default' WHERE id = 'default'");
         }
 
+        const hasIsActive = settingsInfo.some(col => col.name === 'is_active');
+        if (!hasIsActive) {
+          console.log('🔄 Adding is_active column to university_settings table...');
+          await db.runAsync("ALTER TABLE university_settings ADD COLUMN is_active BOOLEAN DEFAULT 1");
+          await db.runAsync("UPDATE university_settings SET is_active = 1");
+        }
+
+        const hasAiTokenLimit = settingsInfo.some(col => col.name === 'ai_token_limit');
+        if (!hasAiTokenLimit) {
+          console.log('🔄 Adding ai_token_limit column to university_settings table...');
+          await db.runAsync("ALTER TABLE university_settings ADD COLUMN ai_token_limit INTEGER DEFAULT 100000");
+          await db.runAsync("UPDATE university_settings SET ai_token_limit = 100000");
+        }
+
         const assignmentsTableInfo = await db.allAsync("PRAGMA table_info(assignments)");
         const hasStream = assignmentsTableInfo.some(col => col.name === 'stream');
 
@@ -230,6 +244,18 @@ export async function initDatabase() {
           if (!settingsColNames.includes('slug')) {
              await db.execAsync("ALTER TABLE university_settings ADD COLUMN slug TEXT UNIQUE");
              await db.execAsync("UPDATE university_settings SET slug = 'default' WHERE id = 'default'");
+          }
+
+          if (!settingsColNames.includes('is_active')) {
+            console.log('🔄 Adding is_active to university_settings (Postgres)...');
+            await db.execAsync("ALTER TABLE university_settings ADD COLUMN is_active BOOLEAN DEFAULT TRUE");
+            await db.execAsync("UPDATE university_settings SET is_active = TRUE");
+          }
+
+          if (!settingsColNames.includes('ai_token_limit')) {
+            console.log('🔄 Adding ai_token_limit to university_settings (Postgres)...');
+            await db.execAsync("ALTER TABLE university_settings ADD COLUMN ai_token_limit BIGINT DEFAULT 100000");
+            await db.execAsync("UPDATE university_settings SET ai_token_limit = 100000");
           }
 
           // Check assignments, certificates, submissions for university_id and stream

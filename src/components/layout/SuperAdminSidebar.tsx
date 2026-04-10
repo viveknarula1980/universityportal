@@ -7,13 +7,19 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
-  ShieldAlert
+  ShieldAlert,
+  BarChart3,
+  Globe,
+  Sparkles,
+  Palette
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { icon: Building2, label: "Super Admin Home", path: "/superadmin" },
+  { icon: BarChart3, label: "Analytics", path: "/superadmin" },
+  { icon: Globe, label: "Universities", path: "/superadmin" },
+  { icon: Sparkles, label: "AI Governance", path: "/superadmin" },
 ];
 
 export function SuperAdminSidebar() {
