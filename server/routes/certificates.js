@@ -7,6 +7,8 @@ import { blockchainService } from '../services/blockchain.js';
 import { generateCertificateId } from '../utils/helpers.js';
 import { aiService } from '../services/ai.js';
 import { upload } from '../services/storage.js';
+import multer from 'multer';
+
 const router = express.Router();
 
 // Issue certificate
@@ -315,17 +317,20 @@ router.post('/:certificateId/revoke', authenticateToken, requireRole('admin'), a
   }
 });
 
+// AI Extraction needs memory storage for the buffer
+const memoryUpload = multer({ storage: multer.memoryStorage() });
+
 /**
  * AI Extract degree info from image
  * POST /api/certificates/extract
  */
-router.post('/extract', authenticateToken, requireRole('admin'), upload.single('degreeImage'), async (req, res) => {
+router.post('/extract', authenticateToken, requireRole('admin'), memoryUpload.single('degreeImage'), async (req, res) => {
   try {
     let base64Data;
     let mimeType;
 
     if (req.file) {
-      // Handle file upload
+      // Handle file upload (now guaranteed to have buffer due to memoryStorage)
       base64Data = req.file.buffer.toString('base64');
       mimeType = req.file.mimetype;
     } else if (req.body.image) {
