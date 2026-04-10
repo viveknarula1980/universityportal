@@ -43,8 +43,7 @@ export function StudentSidebar() {
   return (
     <aside 
       className={cn(
-        "bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 z-50",
-        "lg:fixed lg:left-0 lg:top-0 lg:h-screen h-full",
+        "bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 z-50 h-full",
         collapsed ? "w-20" : "w-64"
       )}
     >
