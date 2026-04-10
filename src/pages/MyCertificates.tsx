@@ -371,14 +371,20 @@ export default function MyCertificates() {
         @media print {
           @page { size: A4 landscape; margin: 0; }
           
-          /* Hide the interactive UI entirely */
-          body > #root > div, 
-          main, 
+          /* Hide all interactive UI elements */
+          .no-print, 
           header, 
           aside,
           button,
-          .MainLayout { 
+          .max-w-6xl { 
             display: none !important; 
+          }
+          
+          /* Ensure MainLayout doesn't add margins/padding for print */
+          main {
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
           }
 
           body {
@@ -397,6 +403,10 @@ export default function MyCertificates() {
             background: white !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 9999;
           }
 
           #print-only-certificate * {
