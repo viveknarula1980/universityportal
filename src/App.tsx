@@ -132,6 +132,7 @@ const App = () => (
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/blockchain" element={<Blockchain />} />
+            <Route path="/login" element={<Login />} />
             
             {/* Branded Entry Points */}
             <Route path="/p/:slug" element={<Landing />} />
@@ -161,8 +162,6 @@ const App = () => (
             <Route path="/my-certificates" element={<ProtectedRoute requiredRole="student"><MyCertificates /></ProtectedRoute>} />
             <Route path="/p/:slug/my-certificates" element={<ProtectedRoute requiredRole="student"><MyCertificates /></ProtectedRoute>} />
             
-            <Route path="/blockchain" element={<ProtectedRoute><Blockchain /></ProtectedRoute>} />
-            <Route path="/p/:slug/blockchain" element={<ProtectedRoute><Blockchain /></ProtectedRoute>} />
             
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/p/:slug/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
