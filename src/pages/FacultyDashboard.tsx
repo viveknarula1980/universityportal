@@ -77,6 +77,7 @@ export default function FacultyDashboard() {
     if (!path) return "";
     return path.startsWith('http') ? path : `${API_URL.replace('/api', '')}${path}`;
   };
+  const handleTabChange = (value: string) => {
     const newPath = value === 'overview' ? `${basePath}/faculty` : `${basePath}/faculty/${value}`;
     navigate(newPath);
   };
