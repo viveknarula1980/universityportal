@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { generateFileHash, submitToBlockchain, generateAssignmentId, hashStudentId, type AssignmentSubmission } from "@/services/blockchain";
 import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { apiService } from "@/services/api";
