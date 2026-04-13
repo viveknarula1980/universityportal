@@ -71,8 +71,12 @@ export default function FacultyDashboard() {
   };
 
   const activeTab = getActiveTab();
+  const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://universityportal-rccw.onrender.com/api" : "http://localhost:3000/api");
 
-  const handleTabChange = (value: string) => {
+  const getFileUrl = (path: string) => {
+    if (!path) return "";
+    return path.startsWith('http') ? path : `${API_URL.replace('/api', '')}${path}`;
+  };
     const newPath = value === 'overview' ? `${basePath}/faculty` : `${basePath}/faculty/${value}`;
     navigate(newPath);
   };
@@ -892,6 +896,39 @@ export default function FacultyDashboard() {
                   )}
                 </div>
               </div>
+
+              {/* Document Preview */}
+              {selectedSubmission.file_path && (
+                <div className="glass-card rounded-xl p-4 overflow-hidden border border-primary/10">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-primary" />
+                    Submission Preview
+                  </h3>
+                  <div className="aspect-[4/3] w-full bg-black/5 rounded-lg border flex items-center justify-center overflow-auto">
+                    {selectedSubmission.file_path.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/) ? (
+                      <img 
+                        src={getFileUrl(selectedSubmission.file_path)} 
+                        alt="Submission Preview" 
+                        className="max-w-full max-h-full object-contain p-2"
+                      />
+                    ) : selectedSubmission.file_path.toLowerCase().endsWith('.pdf') ? (
+                      <iframe 
+                        src={`${getFileUrl(selectedSubmission.file_path)}#toolbar=0`} 
+                        className="w-full h-full border-none rounded-md"
+                        title="PDF Preview"
+                      />
+                    ) : (
+                      <div className="text-center p-8">
+                        <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                          <FileText className="w-8 h-8 text-muted-foreground opacity-40" />
+                        </div>
+                        <p className="text-sm font-medium text-muted-foreground">Preview not available for this file type.</p>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Please download the file to review it.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* File Download */}
               <div className="flex justify-end gap-2">

@@ -31,6 +31,7 @@ export default function AIGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiUsageType, setAiUsageType] = useState<"none" | "partial" | "full">("none");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileHash, setFileHash] = useState<string | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState("");
   const [availableAssignments, setAvailableAssignments] = useState<any[]>([]);
@@ -150,6 +151,14 @@ export default function AIGenerator() {
     const file = e.target.files?.[0];
     if (file) {
       setUploadedFile(file);
+      
+      // Create preview URL if it's an image
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (file.type.startsWith('image/')) {
+        setPreviewUrl(URL.createObjectURL(file));
+      } else {
+        setPreviewUrl(null);
+      }
       
       // Generate file hash
       try {
@@ -302,13 +311,35 @@ export default function AIGenerator() {
                 )}
               >
                 {uploadedFile ? (
-                  <div className="flex items-center justify-center gap-3">
-                    <FileText className="w-8 h-8 text-success" />
-                    <div className="text-left">
-                      <p className="font-medium">{uploadedFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(uploadedFile.size / 1024).toFixed(1)} KB
-                      </p>
+                  <div className="flex items-center justify-center gap-4 py-4 px-2">
+                    <div className="w-20 h-20 rounded-lg border bg-background overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                      {previewUrl ? (
+                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <FileText className="w-10 h-10 text-primary/40" />
+                      )}
+                    </div>
+                    <div className="text-left flex-1 min-w-0">
+                      <p className="font-bold text-lg truncate">{uploadedFile.name}</p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <Badge variant="secondary" className="text-[10px]">
+                          {(uploadedFile.size / 1024).toFixed(1)} KB
+                        </Badge>
+                        <span className="capitalize">{uploadedFile.name.split('.').pop()} File</span>
+                      </div>
+                      <Button 
+                        variant="link" 
+                        size="sm" 
+                        className="text-xs p-0 h-auto mt-2 text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setUploadedFile(null);
+                          setPreviewUrl(null);
+                          setFileHash(null);
+                        }}
+                      >
+                        Remove file
+                      </Button>
                     </div>
                   </div>
                 ) : (

@@ -41,6 +41,7 @@ export default function CertificateIssuance() {
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [isIssuing, setIsIssuing] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [bulkCertificates, setBulkCertificates] = useState<any[]>([]);
   const [issuedCertificate, setIssuedCertificate] = useState<{
     certificateId: string;
@@ -89,6 +90,12 @@ export default function CertificateIssuance() {
 
   const handleExtractFromImage = async (file: File) => {
     setIsExtracting(true);
+    
+    // Create preview URL
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+
     try {
       const response = await apiService.extractDegreeInfo(file);
       if (response.success && response.data) {
@@ -110,6 +117,12 @@ export default function CertificateIssuance() {
       setIsExtracting(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const handleBulkIssue = async () => {
     if (bulkCertificates.length === 0) return;
@@ -288,10 +301,18 @@ export default function CertificateIssuance() {
                         <Camera className="w-4 h-4 text-primary" />
                         AI Extraction Preview
                       </div>
-                      <div className="aspect-video rounded-lg bg-black/40 flex items-center justify-center border border-white/5">
-                        <p className="text-xs text-muted-foreground text-center px-4 italic">
-                          Document preview will appear here after AI scanning
-                        </p>
+                      <div className="aspect-video rounded-lg bg-black/40 flex items-center justify-center border border-white/5 overflow-hidden">
+                        {previewUrl ? (
+                          <img 
+                            src={previewUrl} 
+                            alt="Document Preview" 
+                            className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-500"
+                          />
+                        ) : (
+                          <p className="text-xs text-muted-foreground text-center px-4 italic">
+                            Document preview will appear here after AI scanning
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
